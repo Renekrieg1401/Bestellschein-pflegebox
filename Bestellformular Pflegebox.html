@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1100">
+    <title>Bestellformular Pflegehilfsmittel</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        body { font-family: "Helvetica", Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; width: 1050px; }
+        .header { 
+            background: linear-gradient(90deg, #702673 0%, #00AEEF 100%); 
+            color: #ffffff; padding: 15px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .header h1 { margin: 0; font-size: 1.2rem; font-weight: bold; }
+        .container { padding: 10px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 0.85rem; }
+        
+        select { 
+            font-size: 1.2rem; text-align: center; text-align-last: center; 
+            padding: 3px; font-weight: bold; border: 1px solid #ccc; border-radius: 4px;
+        }
+
+        .button-container { margin: 50px 0; display: flex; justify-content: center; width: 100%; }
+        
+        .btn { 
+            padding: 20px 40px; border: none; border-radius: 10px; font-weight: bold; 
+            color: white; font-size: 1.3rem; background-color: #00AEEF; width: 500px; cursor: pointer;
+        }
+        
+        #capture-area { background: white; padding-bottom: 20px; }
+        input[type="checkbox"] { transform: scale(1.4); }
+        input[type="text"] { border: 1px solid #eee; padding: 6px; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+<div id="capture-area">
+    <div class="header">
+        <h1>Bestellformular Pflegehilfsmittel</h1>
+        <div>
+            Monat:
+            <select id="monat">
+                <option value="" selected disabled hidden></option>
+                <option>Januar</option><option>Februar</option><option>März</option><option>April</option>
+                <option>Mai</option><option>Juni</option><option>Juli</option><option>August</option>
+                <option>September</option><option>Oktober</option><option>November</option><option>Dezember</option>
+            </select>
+        </div>
+    </div>
+    <div class="container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Einmalhandschuhe (S, M, L)</th>
+                    <th>Waschh.</th>
+                    <th>Unterl.</th>
+                    <th>Desinfektion</th>
+                    <th>Wipes</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="button-container">
+    <button id="mainBtn" class="btn" onclick="generateAndShare()">PDF SENDEN / TEILEN</button>
+</div>
+
+<script>
+    const tbody = document.getElementById('table-body');
+    const getOptions = () => [0,1,2,3,4,5].map(v => `<option value="${v}">${v === 0 ? '' : v}</option>`).join('');
+
+    for (let i = 0; i < 16; i++) {
+        tbody.innerHTML += `
+            <tr>
+                <td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="Name"></td>
+                <td>
+                    S: <select>${getOptions()}</select>
+                    M: <select>${getOptions()}</select>
+                    L: <select>${getOptions()}</select>
+                </td>
+                <td><input type="checkbox"></td><td><input type="checkbox"></td>
+                <td>H <input type="checkbox"> F <input type="checkbox"></td>
+                <td>H <input type="checkbox"> F <input type="checkbox"></td>
+            </tr>`;
+    }
+
+    async function generateAndShare() {
+        const btn = document.getElementById('mainBtn');
+        const monat = document.getElementById('monat').value || 'Bestellung';
+        const dateiname = `Bestellung_${monat}.pdf`;
+        
+        btn.innerText = "Verarbeite...";
+        btn.disabled = true;
+
+        try {
+            const canvas = await html2canvas(document.getElementById('capture-area'), { 
+                scale: 2, 
+                useCORS: true,
+                logging: false 
+            });
+            
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('l', 'mm', 'a4');
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            pdf.addImage(imgData, 'JPEG', 0, 0, 297, (canvas.height * 297) / canvas.width);
+            
+            const blob = pdf.output('blob');
+
+            // Versuch 1: Web Share API (Mobilgeräte + HTTPS)
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], dateiname, { type: "application/pdf" })] })) {
+                const file = new File([blob], dateiname, { type: "application/pdf" });
+                await navigator.share({ files: [file], title: dateiname });
+            } 
+            // Versuch 2: Download-Link (Windows/Android Desktop)
+            else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = dateiname;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            }
+        } catch (err) { 
+            alert("Fehler: " + err.message); 
+        } finally {
+            btn.innerText = "PDF SENDEN / TEILEN";
+            btn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>
