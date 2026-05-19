@@ -26,6 +26,7 @@
             padding: 3px; font-weight: bold; border: 1px solid #ccc; border-radius: 4px;
         }
 
+        /* ── STATUS ── */
         .status-bar {
             display: flex; justify-content: center; align-items: center; gap: 8px;
             font-size: 0.82rem; color: #555; margin: 10px 0 4px; min-height: 22px;
@@ -37,19 +38,23 @@
         .status-dot.saved  { background-color: #4CAF50; }
         .status-dot.saving { background-color: #FFA500; }
 
+        /* ── BUTTONS ── */
         .button-container {
             margin: 12px 0 24px; display: flex; flex-direction: column;
             align-items: center; gap: 12px; width: 100%;
         }
+        .btn-row { display: flex; gap: 14px; justify-content: center; width: 100%; }
 
         .btn {
             padding: 20px 40px; border: none; border-radius: 10px; font-weight: bold;
-            color: white; font-size: 1.3rem; width: 500px; cursor: pointer;
+            color: white; font-size: 1.3rem; cursor: pointer;
             transition: background-color 0.25s, transform 0.1s;
         }
         .btn:active:not(:disabled) { transform: scale(0.97); }
         .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
+        /* Haupt-Button */
+        .btn-main   { width: 380px; }
         .btn-prepare { background-color: #00AEEF; }
         .btn-prepare:hover:not(:disabled) { background-color: #0090cc; }
 
@@ -64,13 +69,46 @@
         }
         .btn-share:hover:not(:disabled) { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
 
+        /* Löschen-Button */
+        .btn-delete {
+            width: 100px; background-color: #e53935; font-size: 1.1rem;
+            padding: 20px 10px;
+        }
+        .btn-delete:hover:not(:disabled) { background-color: #b71c1c; }
+
         .share-hint { font-size: 0.82rem; color: #555; text-align: center; display: none; max-width: 500px; }
         .share-hint.visible { display: block; }
+
+        /* ── BESTÄTIGUNGS-DIALOG ── */
+        .confirm-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+            z-index: 1000; justify-content: center; align-items: center;
+        }
+        .confirm-overlay.visible { display: flex; }
+        .confirm-box {
+            background: #fff; border-radius: 16px; padding: 32px 36px;
+            max-width: 420px; width: 90%; text-align: center;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+        }
+        .confirm-box h2 { margin: 0 0 10px; font-size: 1.3rem; color: #b71c1c; }
+        .confirm-box p  { margin: 0 0 26px; font-size: 0.95rem; color: #444; line-height: 1.5; }
+        .confirm-btns   { display: flex; gap: 14px; justify-content: center; }
+        .confirm-btns button {
+            flex: 1; padding: 14px; border: none; border-radius: 10px;
+            font-size: 1rem; font-weight: bold; cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .confirm-btns button:active { transform: scale(0.97); }
+        .btn-confirm-delete { background-color: #e53935; color: #fff; }
+        .btn-confirm-delete:hover { background-color: #b71c1c; }
+        .btn-confirm-cancel { background-color: #eeeeee; color: #333; }
+        .btn-confirm-cancel:hover { background-color: #bdbdbd; }
 
         #capture-area { background: white; padding-bottom: 20px; }
         input[type="checkbox"] { transform: scale(1.4); }
         input[type="text"] { border: 1px solid #eee; padding: 6px; font-size: 1.1rem; }
 
+        /* ── TOAST ── */
         .toast {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: #333; color: #fff; padding: 12px 28px; border-radius: 8px;
@@ -80,10 +118,12 @@
         .toast.show    { opacity: 1; }
         .toast.success { background: #4CAF50; }
         .toast.error   { background: #e53935; }
+        .toast.warn    { background: #e65100; }
     </style>
 </head>
 <body>
 
+<!-- ══ FORMULAR ══ -->
 <div id="capture-area">
     <div class="header">
         <h1>Bestellformular Pflegehilfsmittel</h1>
@@ -114,44 +154,53 @@
     </div>
 </div>
 
+<!-- ══ STATUS ══ -->
 <div class="status-bar">
     <span class="status-dot" id="statusDot"></span>
     <span id="statusText"></span>
 </div>
 
+<!-- ══ BUTTONS ══ -->
 <div class="button-container">
-    <button id="mainBtn" class="btn btn-prepare" onclick="handleMainButton()">
-        PDF ERSTELLEN
-    </button>
+    <div class="btn-row">
+        <button id="mainBtn" class="btn btn-main btn-prepare" onclick="handleMainButton()">
+            PDF ERSTELLEN
+        </button>
+        <button class="btn btn-delete" onclick="confirmDelete()" title="Formular leeren">
+            🗑️ Leeren
+        </button>
+    </div>
     <div class="share-hint" id="shareHint">
         ☝️ Nochmal tippen &rarr; Aktionsmenü öffnet sich
+    </div>
+</div>
+
+<!-- ══ BESTÄTIGUNGS-DIALOG ══ -->
+<div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+        <h2>🗑️ Formular leeren?</h2>
+        <p>Alle Namen, Mengen und Häkchen werden gelöscht.<br>
+           Der gespeicherte Stand wird ebenfalls entfernt.<br>
+           <strong>Diese Aktion kann nicht rückgängig gemacht werden.</strong></p>
+        <div class="confirm-btns">
+            <button class="btn-confirm-cancel"  onclick="closeConfirm()">Abbrechen</button>
+            <button class="btn-confirm-delete"  onclick="executeDelete()">Ja, alles löschen</button>
+        </div>
     </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════
-   WARUM ZWEI SCHRITTE?
-   ───────────────────────────────────────────────────────────────
-   navigator.share() erfordert einen aktiven User-Gesture-Kontext.
-   html2canvas läuft 1-3 Sekunden async → der Browser-Kontext
-   verfällt in dieser Zeit. Lösung: PDF erst vollständig erstellen
-   und im Speicher halten (Schritt 1), dann mit einem neuen, frischen
-   Tap sofort und synchron navigator.share() aufrufen (Schritt 2).
-   Dadurch öffnet sich das native Aktionsmenü zuverlässig auf iOS,
-   Android und allen anderen Plattformen.
-═══════════════════════════════════════════════════════════════ */
-
     const STORAGE_KEY = 'bestellschein_aktuell';
     const ROWS        = 16;
 
-    let appState    = 'idle';   // 'idle' | 'generating' | 'ready'
+    let appState    = 'idle';
     let pdfBlob     = null;
     let pdfFilename = '';
     let saveTimer   = null;
 
-    /* ── TABELLE ── */
+    /* ══ TABELLE AUFBAUEN ══ */
     const tbody   = document.getElementById('table-body');
     const getOpts = () => [0,1,2,3,4,5].map(v => `<option value="${v}">${v===0?'':v}</option>`).join('');
 
@@ -171,58 +220,50 @@
             </tr>`;
     }
 
-    /* ══════════════════════════════════════════
-       BUTTON-ZUSTANDSMASCHINE
-    ══════════════════════════════════════════ */
+    /* ══ BUTTON-ZUSTANDSMASCHINE ══ */
     function setAppState(state) {
         appState = state;
-        const btn  = document.getElementById('mainBtn');
-        const hint = document.getElementById('shareHint');
+        var btn  = document.getElementById('mainBtn');
+        var hint = document.getElementById('shareHint');
 
         if (state === 'idle') {
             btn.textContent = 'PDF ERSTELLEN';
-            btn.className   = 'btn btn-prepare';
+            btn.className   = 'btn btn-main btn-prepare';
             btn.disabled    = false;
             hint.classList.remove('visible');
         } else if (state === 'generating') {
-            btn.textContent = '⏳  Erstelle PDF \u2026';
-            btn.className   = 'btn btn-prepare';
+            btn.textContent = '\u23f3  Erstelle PDF \u2026';
+            btn.className   = 'btn btn-main btn-prepare';
             btn.disabled    = true;
             hint.classList.remove('visible');
         } else if (state === 'ready') {
-            btn.textContent = '📤  PDF SENDEN / TEILEN';
-            btn.className   = 'btn btn-share';
+            btn.textContent = '\ud83d\udce4  PDF SENDEN / TEILEN';
+            btn.className   = 'btn btn-main btn-share';
             btn.disabled    = false;
             hint.classList.add('visible');
         }
     }
 
-    /* ══════════════════════════════════════════
-       HAUPT-HANDLER
-    ══════════════════════════════════════════ */
+    /* ══ HAUPT-HANDLER ══ */
     async function handleMainButton() {
         if (appState === 'idle')  { await buildPDF(); return; }
         if (appState === 'ready') { doShare();        return; }
     }
 
-    /* ══════════════════════════════════════════
-       SCHRITT 1 — PDF AUFBAUEN (darf async sein)
-    ══════════════════════════════════════════ */
+    /* ══ SCHRITT 1 — PDF ERSTELLEN ══ */
     async function buildPDF() {
         setAppState('generating');
-        const monat = document.getElementById('monat').value || 'Bestellung';
+        var monat = document.getElementById('monat').value || 'Bestellung';
         pdfFilename = 'Bestellung_' + monat + '.pdf';
 
         try {
-            const canvas = await html2canvas(document.getElementById('capture-area'), {
-                scale  : 2,
-                useCORS: true,
-                logging: false
+            var canvas = await html2canvas(document.getElementById('capture-area'), {
+                scale: 2, useCORS: true, logging: false
             });
 
-            const { jsPDF } = window.jspdf;
-            const pdf        = new jsPDF('l', 'mm', 'a4');
-            const imgData    = canvas.toDataURL('image/jpeg', 0.95);
+            var jsPDF   = window.jspdf.jsPDF;
+            var pdf     = new jsPDF('l', 'mm', 'a4');
+            var imgData = canvas.toDataURL('image/jpeg', 0.95);
             pdf.addImage(imgData, 'JPEG', 0, 0, 297, (canvas.height * 297) / canvas.width);
 
             pdfBlob = pdf.output('blob');
@@ -235,19 +276,13 @@
         }
     }
 
-    /* ══════════════════════════════════════════
-       SCHRITT 2 — TEILEN
-       Wird direkt aus dem Click-Handler aufgerufen.
-       Kein await vor navigator.share() → User-Gesture-Kontext
-       ist frisch und gültig → natives Aktionsmenü öffnet sich.
-    ══════════════════════════════════════════ */
+    /* ══ SCHRITT 2 — TEILEN (synchron, frischer Gesture-Kontext) ══ */
     function doShare() {
         if (!pdfBlob) { setAppState('idle'); return; }
 
-        const file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
+        var file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
 
-        /* ── Weg 1: Web Share API + Datei (iOS Safari, Android Chrome) ── */
-        let canShareFiles = false;
+        var canShareFiles = false;
         try {
             canShareFiles = !!(
                 typeof navigator.share    === 'function' &&
@@ -258,58 +293,87 @@
 
         if (canShareFiles) {
             navigator.share({ files: [file], title: pdfFilename })
-                .then(function() {
-                    showToast('Erfolgreich geteilt \u2713', 'success');
-                    setAppState('idle');
-                })
-                .catch(function(err) {
-                    if (err.name === 'AbortError') return; // Nutzer hat abgebrochen
-                    downloadFallback();
-                });
+                .then(function() { showToast('Geteilt \u2713', 'success'); setAppState('idle'); })
+                .catch(function(err) { if (err.name !== 'AbortError') downloadFallback(); });
             return;
         }
 
-        /* ── Weg 2: Web Share API ohne Datei-Support ── */
         if (typeof navigator.share === 'function') {
             var blobUrl = URL.createObjectURL(pdfBlob);
             navigator.share({ title: pdfFilename, url: blobUrl })
-                .then(function() {
-                    showToast('Geteilt \u2713', 'success');
-                    setAppState('idle');
-                })
-                .catch(function(err) {
-                    if (err.name !== 'AbortError') downloadFallback();
-                })
-                .finally(function() {
-                    setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 10000);
-                });
+                .then(function() { showToast('Geteilt \u2713', 'success'); setAppState('idle'); })
+                .catch(function(err) { if (err.name !== 'AbortError') downloadFallback(); })
+                .finally(function() { setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 10000); });
             return;
         }
 
-        /* ── Weg 3: Download-Fallback (Desktop) ── */
         downloadFallback();
     }
 
     function downloadFallback() {
-        try {
-            var url = URL.createObjectURL(pdfBlob);
-            var a   = document.createElement('a');
-            a.href     = url;
-            a.download = pdfFilename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-            showToast('PDF wird heruntergeladen \u2026');
-            setAppState('idle');
-        } catch (err) {
-            showToast('Fehler: ' + err.message, 'error');
-            setAppState('idle');
-        }
+        var url = URL.createObjectURL(pdfBlob);
+        var a   = document.createElement('a');
+        a.href = url; a.download = pdfFilename;
+        document.body.appendChild(a); a.click();
+        setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+        showToast('PDF wird heruntergeladen \u2026');
+        setAppState('idle');
     }
 
     /* ══════════════════════════════════════════
-       DATENPERSISTENZ — SPEICHERN
+       LÖSCHFUNKTION
     ══════════════════════════════════════════ */
+
+    /** Öffnet den Bestätigungs-Dialog */
+    function confirmDelete() {
+        document.getElementById('confirmOverlay').classList.add('visible');
+    }
+
+    /** Schließt den Dialog ohne Aktion */
+    function closeConfirm() {
+        document.getElementById('confirmOverlay').classList.remove('visible');
+    }
+
+    /** Wird nach Bestätigung ausgeführt — löscht alles */
+    function executeDelete() {
+        closeConfirm();
+
+        // 1. Monat zurücksetzen
+        document.getElementById('monat').value = '';
+
+        // 2. Alle Tabellen-Eingaben leeren
+        document.querySelectorAll('[data-key]').forEach(function(el) {
+            if (el.type === 'checkbox') {
+                el.checked = false;
+            } else if (el.tagName === 'SELECT') {
+                el.value = '0';
+            } else {
+                el.value = '';
+            }
+        });
+
+        // 3. localStorage löschen
+        try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+
+        // 4. PDF-Zustand zurücksetzen
+        pdfBlob = null;
+        setAppState('idle');
+        setStatus('', 'Formular geleert');
+
+        showToast('\ud83d\uddd1\ufe0f Formular wurde geleert', 'warn');
+    }
+
+    /* Klick außerhalb des Dialogs schließt ihn */
+    document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+        if (e.target === this) closeConfirm();
+    });
+
+    /* ESC-Taste schließt den Dialog */
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeConfirm();
+    });
+
+    /* ══ DATENPERSISTENZ — SPEICHERN ══ */
     function persistTableData() {
         try {
             var data = { monat: document.getElementById('monat').value };
@@ -318,14 +382,10 @@
             });
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             setStatus('saved', 'Automatisch gespeichert');
-        } catch (_) {
-            setStatus('', 'Speichern nicht verfügbar');
-        }
+        } catch (_) { setStatus('', 'Speichern nicht verf\u00fcgbar'); }
     }
 
-    /* ══════════════════════════════════════════
-       DATENPERSISTENZ — WIEDERHERSTELLEN
-    ══════════════════════════════════════════ */
+    /* ══ DATENPERSISTENZ — WIEDERHERSTELLEN ══ */
     function restoreTableData() {
         try {
             var raw = localStorage.getItem(STORAGE_KEY);
@@ -339,10 +399,10 @@
                 else el.value = val;
             });
             setStatus('saved', 'Daten wiederhergestellt');
-        } catch (_) { /* kein gespeicherter Zustand */ }
+        } catch (_) {}
     }
 
-    /* ── Dateneingabe: PDF-State invalidieren + Autosave ── */
+    /* ══ DATEN-CHANGE-HANDLER ══ */
     function onDataChange() {
         if (appState === 'ready') {
             pdfBlob = null;
@@ -358,9 +418,7 @@
     document.getElementById('table-body').addEventListener('change', onDataChange);
     document.getElementById('monat').addEventListener('change', onDataChange);
 
-    /* ══════════════════════════════════════════
-       HILFSFUNKTIONEN
-    ══════════════════════════════════════════ */
+    /* ══ HILFSFUNKTIONEN ══ */
     function setStatus(type, text) {
         var dot  = document.getElementById('statusDot');
         var span = document.getElementById('statusText');
@@ -376,7 +434,6 @@
         setTimeout(function() { t.classList.remove('show'); }, 3200);
     }
 
-    /* ── Start ── */
     document.addEventListener('DOMContentLoaded', restoreTableData);
 </script>
 </body>
