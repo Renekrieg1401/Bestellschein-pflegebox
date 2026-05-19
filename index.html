@@ -4,62 +4,82 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1100">
     <title>Bestellformular Pflegehilfsmittel</title>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    
+
     <style>
         body { font-family: "Helvetica", Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; width: 1050px; }
-        .header { 
-            background: linear-gradient(90deg, #702673 0%, #00AEEF 100%); 
+
+        .header {
+            background: linear-gradient(90deg, #702673 0%, #00AEEF 100%);
             color: #ffffff; padding: 15px; display: flex; justify-content: space-between; align-items: center;
         }
         .header h1 { margin: 0; font-size: 1.2rem; font-weight: bold; }
+
         .container { padding: 10px; }
         table { width: 100%; border-collapse: collapse; background: white; }
         th, td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 0.85rem; }
-        
-        select { 
-            font-size: 1.2rem; text-align: center; text-align-last: center; 
+
+        select {
+            font-size: 1.2rem; text-align: center; text-align-last: center;
             padding: 3px; font-weight: bold; border: 1px solid #ccc; border-radius: 4px;
         }
 
-        .button-container { margin: 30px 0 20px 0; display: flex; justify-content: center; width: 100%; }
-        
-        .btn { 
-            padding: 20px 40px; border: none; border-radius: 10px; font-weight: bold; 
-            color: white; font-size: 1.3rem; background-color: #00AEEF; width: 500px; cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .btn:hover:not(:disabled) { background-color: #0090cc; }
-        .btn:disabled { background-color: #88d4f0; cursor: not-allowed; }
-
-        /* Status-Badge */
         .status-bar {
             display: flex; justify-content: center; align-items: center; gap: 8px;
-            font-size: 0.82rem; color: #555; margin-bottom: 8px; min-height: 22px;
+            font-size: 0.82rem; color: #555; margin: 10px 0 4px; min-height: 22px;
         }
         .status-dot {
             width: 9px; height: 9px; border-radius: 50%; background-color: #ccc;
             display: inline-block; transition: background-color 0.4s;
         }
-        .status-dot.saved { background-color: #4CAF50; }
+        .status-dot.saved  { background-color: #4CAF50; }
         .status-dot.saving { background-color: #FFA500; }
+
+        .button-container {
+            margin: 12px 0 24px; display: flex; flex-direction: column;
+            align-items: center; gap: 12px; width: 100%;
+        }
+
+        .btn {
+            padding: 20px 40px; border: none; border-radius: 10px; font-weight: bold;
+            color: white; font-size: 1.3rem; width: 500px; cursor: pointer;
+            transition: background-color 0.25s, transform 0.1s;
+        }
+        .btn:active:not(:disabled) { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+        .btn-prepare { background-color: #00AEEF; }
+        .btn-prepare:hover:not(:disabled) { background-color: #0090cc; }
+
+        .btn-share {
+            background: linear-gradient(135deg, #2e7d32, #43a047);
+            box-shadow: 0 4px 14px rgba(46,125,50,0.35);
+            animation: pulse-green 1.8s ease-in-out infinite;
+        }
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 4px 14px rgba(46,125,50,0.35); }
+            50%       { box-shadow: 0 4px 22px rgba(46,125,50,0.65); }
+        }
+        .btn-share:hover:not(:disabled) { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
+
+        .share-hint { font-size: 0.82rem; color: #555; text-align: center; display: none; max-width: 500px; }
+        .share-hint.visible { display: block; }
 
         #capture-area { background: white; padding-bottom: 20px; }
         input[type="checkbox"] { transform: scale(1.4); }
         input[type="text"] { border: 1px solid #eee; padding: 6px; font-size: 1.1rem; }
 
-        /* Toasts */
         .toast {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: #333; color: #fff; padding: 12px 28px; border-radius: 8px;
             font-size: 0.9rem; opacity: 0; pointer-events: none; z-index: 9999;
             transition: opacity 0.35s; white-space: nowrap;
         }
-        .toast.show { opacity: 1; }
+        .toast.show    { opacity: 1; }
         .toast.success { background: #4CAF50; }
-        .toast.error { background: #e53935; }
+        .toast.error   { background: #e53935; }
     </style>
 </head>
 <body>
@@ -94,250 +114,269 @@
     </div>
 </div>
 
-<!-- Speicher-Status -->
 <div class="status-bar">
     <span class="status-dot" id="statusDot"></span>
     <span id="statusText"></span>
 </div>
 
 <div class="button-container">
-    <button id="mainBtn" class="btn" onclick="generateAndShare()">PDF SENDEN / TEILEN</button>
+    <button id="mainBtn" class="btn btn-prepare" onclick="handleMainButton()">
+        PDF ERSTELLEN
+    </button>
+    <div class="share-hint" id="shareHint">
+        ☝️ Nochmal tippen &rarr; Aktionsmenü öffnet sich
+    </div>
 </div>
 
-<!-- Toast-Benachrichtigung -->
 <div class="toast" id="toast"></div>
 
 <script>
-    /* ─────────────────────────────────────────
-       KONSTANTEN
-    ───────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   WARUM ZWEI SCHRITTE?
+   ───────────────────────────────────────────────────────────────
+   navigator.share() erfordert einen aktiven User-Gesture-Kontext.
+   html2canvas läuft 1-3 Sekunden async → der Browser-Kontext
+   verfällt in dieser Zeit. Lösung: PDF erst vollständig erstellen
+   und im Speicher halten (Schritt 1), dann mit einem neuen, frischen
+   Tap sofort und synchron navigator.share() aufrufen (Schritt 2).
+   Dadurch öffnet sich das native Aktionsmenü zuverlässig auf iOS,
+   Android und allen anderen Plattformen.
+═══════════════════════════════════════════════════════════════ */
+
     const STORAGE_KEY = 'bestellschein_aktuell';
     const ROWS        = 16;
-    let   saveTimer   = null;
 
-    /* ─────────────────────────────────────────
-       TABELLE AUFBAUEN
-    ───────────────────────────────────────── */
-    const tbody     = document.getElementById('table-body');
-    const getOptions = () => [0,1,2,3,4,5].map(v => `<option value="${v}">${v === 0 ? '' : v}</option>`).join('');
+    let appState    = 'idle';   // 'idle' | 'generating' | 'ready'
+    let pdfBlob     = null;
+    let pdfFilename = '';
+    let saveTimer   = null;
+
+    /* ── TABELLE ── */
+    const tbody   = document.getElementById('table-body');
+    const getOpts = () => [0,1,2,3,4,5].map(v => `<option value="${v}">${v===0?'':v}</option>`).join('');
 
     for (let i = 0; i < ROWS; i++) {
         tbody.innerHTML += `
             <tr>
                 <td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="Name" data-key="name-${i}"></td>
                 <td>
-                    S: <select data-key="s-${i}">${getOptions()}</select>
-                    M: <select data-key="m-${i}">${getOptions()}</select>
-                    L: <select data-key="l-${i}">${getOptions()}</select>
+                    S:<select data-key="s-${i}">${getOpts()}</select>
+                    M:<select data-key="m-${i}">${getOpts()}</select>
+                    L:<select data-key="l-${i}">${getOpts()}</select>
                 </td>
                 <td><input type="checkbox" data-key="wh-${i}"></td>
                 <td><input type="checkbox" data-key="ul-${i}"></td>
-                <td>H <input type="checkbox" data-key="dh-${i}"> F <input type="checkbox" data-key="df-${i}"></td>
-                <td>H <input type="checkbox" data-key="wph-${i}"> F <input type="checkbox" data-key="wpf-${i}"></td>
+                <td>H<input type="checkbox" data-key="dh-${i}"> F<input type="checkbox" data-key="df-${i}"></td>
+                <td>H<input type="checkbox" data-key="wph-${i}"> F<input type="checkbox" data-key="wpf-${i}"></td>
             </tr>`;
     }
 
-    /* ─────────────────────────────────────────
-       DATENPERSISTENZ — SPEICHERN
-    ───────────────────────────────────────── */
-    function persistTableData() {
-        try {
-            const data = {};
-            // Monat
-            data['monat'] = document.getElementById('monat').value;
+    /* ══════════════════════════════════════════
+       BUTTON-ZUSTANDSMASCHINE
+    ══════════════════════════════════════════ */
+    function setAppState(state) {
+        appState = state;
+        const btn  = document.getElementById('mainBtn');
+        const hint = document.getElementById('shareHint');
 
-            // Alle benannten Eingaben
-            document.querySelectorAll('[data-key]').forEach(el => {
-                if (el.type === 'checkbox') {
-                    data[el.dataset.key] = el.checked;
-                } else {
-                    data[el.dataset.key] = el.value;
-                }
+        if (state === 'idle') {
+            btn.textContent = 'PDF ERSTELLEN';
+            btn.className   = 'btn btn-prepare';
+            btn.disabled    = false;
+            hint.classList.remove('visible');
+        } else if (state === 'generating') {
+            btn.textContent = '⏳  Erstelle PDF \u2026';
+            btn.className   = 'btn btn-prepare';
+            btn.disabled    = true;
+            hint.classList.remove('visible');
+        } else if (state === 'ready') {
+            btn.textContent = '📤  PDF SENDEN / TEILEN';
+            btn.className   = 'btn btn-share';
+            btn.disabled    = false;
+            hint.classList.add('visible');
+        }
+    }
+
+    /* ══════════════════════════════════════════
+       HAUPT-HANDLER
+    ══════════════════════════════════════════ */
+    async function handleMainButton() {
+        if (appState === 'idle')  { await buildPDF(); return; }
+        if (appState === 'ready') { doShare();        return; }
+    }
+
+    /* ══════════════════════════════════════════
+       SCHRITT 1 — PDF AUFBAUEN (darf async sein)
+    ══════════════════════════════════════════ */
+    async function buildPDF() {
+        setAppState('generating');
+        const monat = document.getElementById('monat').value || 'Bestellung';
+        pdfFilename = 'Bestellung_' + monat + '.pdf';
+
+        try {
+            const canvas = await html2canvas(document.getElementById('capture-area'), {
+                scale  : 2,
+                useCORS: true,
+                logging: false
             });
 
+            const { jsPDF } = window.jspdf;
+            const pdf        = new jsPDF('l', 'mm', 'a4');
+            const imgData    = canvas.toDataURL('image/jpeg', 0.95);
+            pdf.addImage(imgData, 'JPEG', 0, 0, 297, (canvas.height * 297) / canvas.width);
+
+            pdfBlob = pdf.output('blob');
+            setAppState('ready');
+            showToast('PDF bereit \u2013 jetzt Senden tippen \u2713', 'success');
+
+        } catch (err) {
+            showToast('Fehler: ' + err.message, 'error');
+            setAppState('idle');
+        }
+    }
+
+    /* ══════════════════════════════════════════
+       SCHRITT 2 — TEILEN
+       Wird direkt aus dem Click-Handler aufgerufen.
+       Kein await vor navigator.share() → User-Gesture-Kontext
+       ist frisch und gültig → natives Aktionsmenü öffnet sich.
+    ══════════════════════════════════════════ */
+    function doShare() {
+        if (!pdfBlob) { setAppState('idle'); return; }
+
+        const file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
+
+        /* ── Weg 1: Web Share API + Datei (iOS Safari, Android Chrome) ── */
+        let canShareFiles = false;
+        try {
+            canShareFiles = !!(
+                typeof navigator.share    === 'function' &&
+                typeof navigator.canShare === 'function' &&
+                navigator.canShare({ files: [file] })
+            );
+        } catch (_) { canShareFiles = false; }
+
+        if (canShareFiles) {
+            navigator.share({ files: [file], title: pdfFilename })
+                .then(function() {
+                    showToast('Erfolgreich geteilt \u2713', 'success');
+                    setAppState('idle');
+                })
+                .catch(function(err) {
+                    if (err.name === 'AbortError') return; // Nutzer hat abgebrochen
+                    downloadFallback();
+                });
+            return;
+        }
+
+        /* ── Weg 2: Web Share API ohne Datei-Support ── */
+        if (typeof navigator.share === 'function') {
+            var blobUrl = URL.createObjectURL(pdfBlob);
+            navigator.share({ title: pdfFilename, url: blobUrl })
+                .then(function() {
+                    showToast('Geteilt \u2713', 'success');
+                    setAppState('idle');
+                })
+                .catch(function(err) {
+                    if (err.name !== 'AbortError') downloadFallback();
+                })
+                .finally(function() {
+                    setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 10000);
+                });
+            return;
+        }
+
+        /* ── Weg 3: Download-Fallback (Desktop) ── */
+        downloadFallback();
+    }
+
+    function downloadFallback() {
+        try {
+            var url = URL.createObjectURL(pdfBlob);
+            var a   = document.createElement('a');
+            a.href     = url;
+            a.download = pdfFilename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+            showToast('PDF wird heruntergeladen \u2026');
+            setAppState('idle');
+        } catch (err) {
+            showToast('Fehler: ' + err.message, 'error');
+            setAppState('idle');
+        }
+    }
+
+    /* ══════════════════════════════════════════
+       DATENPERSISTENZ — SPEICHERN
+    ══════════════════════════════════════════ */
+    function persistTableData() {
+        try {
+            var data = { monat: document.getElementById('monat').value };
+            document.querySelectorAll('[data-key]').forEach(function(el) {
+                data[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
+            });
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             setStatus('saved', 'Automatisch gespeichert');
-        } catch (e) {
-            // localStorage nicht verfügbar (z.B. Private Mode mancher Browser)
+        } catch (_) {
             setStatus('', 'Speichern nicht verfügbar');
         }
     }
 
-    /* ─────────────────────────────────────────
+    /* ══════════════════════════════════════════
        DATENPERSISTENZ — WIEDERHERSTELLEN
-    ───────────────────────────────────────── */
+    ══════════════════════════════════════════ */
     function restoreTableData() {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
+            var raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) return;
-
-            const data = JSON.parse(raw);
-
-            // Monat
-            if (data['monat']) {
-                document.getElementById('monat').value = data['monat'];
-            }
-
-            // Alle benannten Eingaben
-            document.querySelectorAll('[data-key]').forEach(el => {
-                const val = data[el.dataset.key];
+            var data = JSON.parse(raw);
+            if (data.monat) document.getElementById('monat').value = data.monat;
+            document.querySelectorAll('[data-key]').forEach(function(el) {
+                var val = data[el.dataset.key];
                 if (val === undefined) return;
-
-                if (el.type === 'checkbox') {
-                    el.checked = Boolean(val);
-                } else {
-                    el.value = val;
-                }
+                if (el.type === 'checkbox') el.checked = Boolean(val);
+                else el.value = val;
             });
-
             setStatus('saved', 'Daten wiederhergestellt');
-        } catch (e) {
-            setStatus('', '');
-        }
+        } catch (_) { /* kein gespeicherter Zustand */ }
     }
 
-    /* ─────────────────────────────────────────
-       DEBOUNCED EVENT-LISTENER
-    ───────────────────────────────────────── */
-    function scheduleSave() {
-        setStatus('saving', 'Speichert …');
+    /* ── Dateneingabe: PDF-State invalidieren + Autosave ── */
+    function onDataChange() {
+        if (appState === 'ready') {
+            pdfBlob = null;
+            setAppState('idle');
+            showToast('Daten ge\u00e4ndert \u2013 PDF neu erstellen');
+        }
+        setStatus('saving', 'Speichert \u2026');
         clearTimeout(saveTimer);
         saveTimer = setTimeout(persistTableData, 400);
     }
 
-    // Tabelle: alle Eingaben überwachen
-    document.getElementById('table-body').addEventListener('input',  scheduleSave);
-    document.getElementById('table-body').addEventListener('change', scheduleSave);
+    document.getElementById('table-body').addEventListener('input',  onDataChange);
+    document.getElementById('table-body').addEventListener('change', onDataChange);
+    document.getElementById('monat').addEventListener('change', onDataChange);
 
-    // Monats-Dropdown
-    document.getElementById('monat').addEventListener('change', scheduleSave);
-
-    /* ─────────────────────────────────────────
-       STATUS-ANZEIGE
-    ───────────────────────────────────────── */
+    /* ══════════════════════════════════════════
+       HILFSFUNKTIONEN
+    ══════════════════════════════════════════ */
     function setStatus(type, text) {
-        const dot  = document.getElementById('statusDot');
-        const span = document.getElementById('statusText');
-        dot.className  = 'status-dot' + (type ? ' ' + type : '');
+        var dot  = document.getElementById('statusDot');
+        var span = document.getElementById('statusText');
+        dot.className    = 'status-dot' + (type ? ' ' + type : '');
         span.textContent = text;
     }
 
-    /* ─────────────────────────────────────────
-       TOAST
-    ───────────────────────────────────────── */
-    function showToast(msg, type = '') {
-        const t = document.getElementById('toast');
-        t.textContent  = msg;
-        t.className    = 'toast' + (type ? ' ' + type : '');
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className   = 'toast' + (type ? ' ' + type : '');
         t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3000);
+        setTimeout(function() { t.classList.remove('show'); }, 3200);
     }
 
-    /* ─────────────────────────────────────────
-       PDF TEILEN / HERUNTERLADEN
-    ───────────────────────────────────────── */
-
-    /**
-     * Teilt das PDF nativ (Web Share API) oder lädt es herunter (Fallback).
-     * @param {Blob}   pdfBlob  - PDF als Blob
-     * @param {string} filename - Dateiname
-     */
-    async function shareOrderPDF(pdfBlob, filename) {
-        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-
-        // ── Weg 1: Web Share API mit Datei-Support ──────────────────────────
-        if (
-            typeof navigator.share    === 'function' &&
-            typeof navigator.canShare === 'function' &&
-            navigator.canShare({ files: [file] })
-        ) {
-            try {
-                await navigator.share({ files: [file], title: filename });
-                showToast('Erfolgreich geteilt ✓', 'success');
-                return;
-            } catch (err) {
-                // Nutzer hat Teilen abgebrochen → kein Fehler anzeigen
-                if (err.name === 'AbortError') return;
-                // Anderer Fehler → auf Fallback weiterleiten
-            }
-        }
-
-        // ── Weg 2: Web Share API ohne Datei (nur Link/Text) ─────────────────
-        // Einige Mobile-Browser unterstützen share() aber nicht canShare({files})
-        // → Blob als Object-URL übergeben (kein echter Datei-Share, aber Teilen-Menü)
-        if (typeof navigator.share === 'function') {
-            try {
-                const blobUrl = URL.createObjectURL(pdfBlob);
-                await navigator.share({ title: filename, url: blobUrl });
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-                showToast('Geteilt ✓', 'success');
-                return;
-            } catch (err) {
-                if (err.name === 'AbortError') return;
-            }
-        }
-
-        // ── Weg 3: Direkter Download (Desktop-Fallback) ──────────────────────
-        try {
-            const url = URL.createObjectURL(pdfBlob);
-            const a   = document.createElement('a');
-            a.href     = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 150);
-            showToast('PDF wird heruntergeladen …');
-        } catch (err) {
-            // ── Weg 4: mailto-Fallback (absoluter Notfall) ──────────────────
-            showToast('Download nicht möglich – bitte Screenshot verwenden.', 'error');
-        }
-    }
-
-    /* ─────────────────────────────────────────
-       HAUPT-FUNKTION: PDF ERZEUGEN & TEILEN
-    ───────────────────────────────────────── */
-    async function generateAndShare() {
-        const btn      = document.getElementById('mainBtn');
-        const monat    = document.getElementById('monat').value || 'Bestellung';
-        const dateiname = `Bestellung_${monat}.pdf`;
-
-        btn.innerText = 'Verarbeite …';
-        btn.disabled  = true;
-
-        try {
-            // HTML → Canvas
-            const canvas = await html2canvas(document.getElementById('capture-area'), {
-                scale    : 2,
-                useCORS  : true,
-                logging  : false
-            });
-
-            // Canvas → PDF
-            const { jsPDF } = window.jspdf;
-            const pdf        = new jsPDF('l', 'mm', 'a4');
-            const imgData    = canvas.toDataURL('image/jpeg', 0.95);
-            const pdfH       = (canvas.height * 297) / canvas.width;
-            pdf.addImage(imgData, 'JPEG', 0, 0, 297, pdfH);
-
-            const blob = pdf.output('blob');
-
-            // Teilen / Download
-            await shareOrderPDF(blob, dateiname);
-
-        } catch (err) {
-            showToast('Fehler: ' + err.message, 'error');
-        } finally {
-            btn.innerText = 'PDF SENDEN / TEILEN';
-            btn.disabled  = false;
-        }
-    }
-
-    /* ─────────────────────────────────────────
-       START: Daten wiederherstellen
-    ───────────────────────────────────────── */
+    /* ── Start ── */
     document.addEventListener('DOMContentLoaded', restoreTableData);
 </script>
 </body>
