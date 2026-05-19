@@ -24,16 +24,42 @@
             padding: 3px; font-weight: bold; border: 1px solid #ccc; border-radius: 4px;
         }
 
-        .button-container { margin: 50px 0; display: flex; justify-content: center; width: 100%; }
+        .button-container { margin: 30px 0 20px 0; display: flex; justify-content: center; width: 100%; }
         
         .btn { 
             padding: 20px 40px; border: none; border-radius: 10px; font-weight: bold; 
             color: white; font-size: 1.3rem; background-color: #00AEEF; width: 500px; cursor: pointer;
+            transition: background-color 0.2s;
         }
-        
+        .btn:hover:not(:disabled) { background-color: #0090cc; }
+        .btn:disabled { background-color: #88d4f0; cursor: not-allowed; }
+
+        /* Status-Badge */
+        .status-bar {
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            font-size: 0.82rem; color: #555; margin-bottom: 8px; min-height: 22px;
+        }
+        .status-dot {
+            width: 9px; height: 9px; border-radius: 50%; background-color: #ccc;
+            display: inline-block; transition: background-color 0.4s;
+        }
+        .status-dot.saved { background-color: #4CAF50; }
+        .status-dot.saving { background-color: #FFA500; }
+
         #capture-area { background: white; padding-bottom: 20px; }
         input[type="checkbox"] { transform: scale(1.4); }
         input[type="text"] { border: 1px solid #eee; padding: 6px; font-size: 1.1rem; }
+
+        /* Toasts */
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #333; color: #fff; padding: 12px 28px; border-radius: 8px;
+            font-size: 0.9rem; opacity: 0; pointer-events: none; z-index: 9999;
+            transition: opacity 0.35s; white-space: nowrap;
+        }
+        .toast.show { opacity: 1; }
+        .toast.success { background: #4CAF50; }
+        .toast.error { background: #e53935; }
     </style>
 </head>
 <body>
@@ -68,76 +94,251 @@
     </div>
 </div>
 
+<!-- Speicher-Status -->
+<div class="status-bar">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText"></span>
+</div>
+
 <div class="button-container">
     <button id="mainBtn" class="btn" onclick="generateAndShare()">PDF SENDEN / TEILEN</button>
 </div>
 
+<!-- Toast-Benachrichtigung -->
+<div class="toast" id="toast"></div>
+
 <script>
-    const tbody = document.getElementById('table-body');
+    /* ─────────────────────────────────────────
+       KONSTANTEN
+    ───────────────────────────────────────── */
+    const STORAGE_KEY = 'bestellschein_aktuell';
+    const ROWS        = 16;
+    let   saveTimer   = null;
+
+    /* ─────────────────────────────────────────
+       TABELLE AUFBAUEN
+    ───────────────────────────────────────── */
+    const tbody     = document.getElementById('table-body');
     const getOptions = () => [0,1,2,3,4,5].map(v => `<option value="${v}">${v === 0 ? '' : v}</option>`).join('');
 
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < ROWS; i++) {
         tbody.innerHTML += `
             <tr>
-                <td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="Name"></td>
+                <td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="Name" data-key="name-${i}"></td>
                 <td>
-                    S: <select>${getOptions()}</select>
-                    M: <select>${getOptions()}</select>
-                    L: <select>${getOptions()}</select>
+                    S: <select data-key="s-${i}">${getOptions()}</select>
+                    M: <select data-key="m-${i}">${getOptions()}</select>
+                    L: <select data-key="l-${i}">${getOptions()}</select>
                 </td>
-                <td><input type="checkbox"></td><td><input type="checkbox"></td>
-                <td>H <input type="checkbox"> F <input type="checkbox"></td>
-                <td>H <input type="checkbox"> F <input type="checkbox"></td>
+                <td><input type="checkbox" data-key="wh-${i}"></td>
+                <td><input type="checkbox" data-key="ul-${i}"></td>
+                <td>H <input type="checkbox" data-key="dh-${i}"> F <input type="checkbox" data-key="df-${i}"></td>
+                <td>H <input type="checkbox" data-key="wph-${i}"> F <input type="checkbox" data-key="wpf-${i}"></td>
             </tr>`;
     }
 
-    async function generateAndShare() {
-        const btn = document.getElementById('mainBtn');
-        const monat = document.getElementById('monat').value || 'Bestellung';
-        const dateiname = `Bestellung_${monat}.pdf`;
-        
-        btn.innerText = "Verarbeite...";
-        btn.disabled = true;
-
+    /* ─────────────────────────────────────────
+       DATENPERSISTENZ — SPEICHERN
+    ───────────────────────────────────────── */
+    function persistTableData() {
         try {
-            const canvas = await html2canvas(document.getElementById('capture-area'), { 
-                scale: 2, 
-                useCORS: true,
-                logging: false 
-            });
-            
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('l', 'mm', 'a4');
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            pdf.addImage(imgData, 'JPEG', 0, 0, 297, (canvas.height * 297) / canvas.width);
-            
-            const blob = pdf.output('blob');
+            const data = {};
+            // Monat
+            data['monat'] = document.getElementById('monat').value;
 
-            // Versuch 1: Web Share API (Mobilgeräte + HTTPS)
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], dateiname, { type: "application/pdf" })] })) {
-                const file = new File([blob], dateiname, { type: "application/pdf" });
-                await navigator.share({ files: [file], title: dateiname });
-            } 
-            // Versuch 2: Download-Link (Windows/Android Desktop)
-            else {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = dateiname;
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                }, 100);
-            }
-        } catch (err) { 
-            alert("Fehler: " + err.message); 
-        } finally {
-            btn.innerText = "PDF SENDEN / TEILEN";
-            btn.disabled = false;
+            // Alle benannten Eingaben
+            document.querySelectorAll('[data-key]').forEach(el => {
+                if (el.type === 'checkbox') {
+                    data[el.dataset.key] = el.checked;
+                } else {
+                    data[el.dataset.key] = el.value;
+                }
+            });
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            setStatus('saved', 'Automatisch gespeichert');
+        } catch (e) {
+            // localStorage nicht verfügbar (z.B. Private Mode mancher Browser)
+            setStatus('', 'Speichern nicht verfügbar');
         }
     }
+
+    /* ─────────────────────────────────────────
+       DATENPERSISTENZ — WIEDERHERSTELLEN
+    ───────────────────────────────────────── */
+    function restoreTableData() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+
+            const data = JSON.parse(raw);
+
+            // Monat
+            if (data['monat']) {
+                document.getElementById('monat').value = data['monat'];
+            }
+
+            // Alle benannten Eingaben
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const val = data[el.dataset.key];
+                if (val === undefined) return;
+
+                if (el.type === 'checkbox') {
+                    el.checked = Boolean(val);
+                } else {
+                    el.value = val;
+                }
+            });
+
+            setStatus('saved', 'Daten wiederhergestellt');
+        } catch (e) {
+            setStatus('', '');
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       DEBOUNCED EVENT-LISTENER
+    ───────────────────────────────────────── */
+    function scheduleSave() {
+        setStatus('saving', 'Speichert …');
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(persistTableData, 400);
+    }
+
+    // Tabelle: alle Eingaben überwachen
+    document.getElementById('table-body').addEventListener('input',  scheduleSave);
+    document.getElementById('table-body').addEventListener('change', scheduleSave);
+
+    // Monats-Dropdown
+    document.getElementById('monat').addEventListener('change', scheduleSave);
+
+    /* ─────────────────────────────────────────
+       STATUS-ANZEIGE
+    ───────────────────────────────────────── */
+    function setStatus(type, text) {
+        const dot  = document.getElementById('statusDot');
+        const span = document.getElementById('statusText');
+        dot.className  = 'status-dot' + (type ? ' ' + type : '');
+        span.textContent = text;
+    }
+
+    /* ─────────────────────────────────────────
+       TOAST
+    ───────────────────────────────────────── */
+    function showToast(msg, type = '') {
+        const t = document.getElementById('toast');
+        t.textContent  = msg;
+        t.className    = 'toast' + (type ? ' ' + type : '');
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    /* ─────────────────────────────────────────
+       PDF TEILEN / HERUNTERLADEN
+    ───────────────────────────────────────── */
+
+    /**
+     * Teilt das PDF nativ (Web Share API) oder lädt es herunter (Fallback).
+     * @param {Blob}   pdfBlob  - PDF als Blob
+     * @param {string} filename - Dateiname
+     */
+    async function shareOrderPDF(pdfBlob, filename) {
+        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        // ── Weg 1: Web Share API mit Datei-Support ──────────────────────────
+        if (
+            typeof navigator.share    === 'function' &&
+            typeof navigator.canShare === 'function' &&
+            navigator.canShare({ files: [file] })
+        ) {
+            try {
+                await navigator.share({ files: [file], title: filename });
+                showToast('Erfolgreich geteilt ✓', 'success');
+                return;
+            } catch (err) {
+                // Nutzer hat Teilen abgebrochen → kein Fehler anzeigen
+                if (err.name === 'AbortError') return;
+                // Anderer Fehler → auf Fallback weiterleiten
+            }
+        }
+
+        // ── Weg 2: Web Share API ohne Datei (nur Link/Text) ─────────────────
+        // Einige Mobile-Browser unterstützen share() aber nicht canShare({files})
+        // → Blob als Object-URL übergeben (kein echter Datei-Share, aber Teilen-Menü)
+        if (typeof navigator.share === 'function') {
+            try {
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                await navigator.share({ title: filename, url: blobUrl });
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+                showToast('Geteilt ✓', 'success');
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+
+        // ── Weg 3: Direkter Download (Desktop-Fallback) ──────────────────────
+        try {
+            const url = URL.createObjectURL(pdfBlob);
+            const a   = document.createElement('a');
+            a.href     = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 150);
+            showToast('PDF wird heruntergeladen …');
+        } catch (err) {
+            // ── Weg 4: mailto-Fallback (absoluter Notfall) ──────────────────
+            showToast('Download nicht möglich – bitte Screenshot verwenden.', 'error');
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       HAUPT-FUNKTION: PDF ERZEUGEN & TEILEN
+    ───────────────────────────────────────── */
+    async function generateAndShare() {
+        const btn      = document.getElementById('mainBtn');
+        const monat    = document.getElementById('monat').value || 'Bestellung';
+        const dateiname = `Bestellung_${monat}.pdf`;
+
+        btn.innerText = 'Verarbeite …';
+        btn.disabled  = true;
+
+        try {
+            // HTML → Canvas
+            const canvas = await html2canvas(document.getElementById('capture-area'), {
+                scale    : 2,
+                useCORS  : true,
+                logging  : false
+            });
+
+            // Canvas → PDF
+            const { jsPDF } = window.jspdf;
+            const pdf        = new jsPDF('l', 'mm', 'a4');
+            const imgData    = canvas.toDataURL('image/jpeg', 0.95);
+            const pdfH       = (canvas.height * 297) / canvas.width;
+            pdf.addImage(imgData, 'JPEG', 0, 0, 297, pdfH);
+
+            const blob = pdf.output('blob');
+
+            // Teilen / Download
+            await shareOrderPDF(blob, dateiname);
+
+        } catch (err) {
+            showToast('Fehler: ' + err.message, 'error');
+        } finally {
+            btn.innerText = 'PDF SENDEN / TEILEN';
+            btn.disabled  = false;
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       START: Daten wiederherstellen
+    ───────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', restoreTableData);
 </script>
 </body>
 </html>
