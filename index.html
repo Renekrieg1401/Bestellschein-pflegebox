@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1050">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bestellformular Pflegehilfsmittel</title>
 
     <!-- ══ PWA META ══════════════════════════════════════════════════════ -->
@@ -20,7 +20,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        body { font-family: "Helvetica", Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; width: 1050px; }
+        body { font-family: "Helvetica", Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; }
+
+        /* ── AUTO-SKALIERUNG ─────────────────────────────────────────────
+           #scale-wrapper hält das 1050px-Layout.
+           JS berechnet scale = Bildschirmbreite / 1050 und wendet
+           CSS transform:scale() an. Overlays & Toast bleiben außerhalb
+           → werden NICHT skaliert → decken immer den vollen Bildschirm.
+        ─────────────────────────────────────────────────────────────────── */
+        #scale-wrapper {
+            width: 1050px;
+            transform-origin: top left;
+        }
 
         /* ── UPDATE-BANNER (oben fixiert) ── */
         #updateBanner {
@@ -74,15 +85,14 @@
         .btn-row { display: flex; gap: 14px; justify-content: center; width: 100%; }
 
         .btn {
-            padding: clamp(14px, 4vw, 20px) clamp(16px, 5vw, 40px);
-            border: none; border-radius: 10px; font-weight: bold;
-            color: white; font-size: clamp(1rem, 3.5vw, 1.3rem); cursor: pointer;
+            padding: 20px 40px; border: none; border-radius: 10px; font-weight: bold;
+            color: white; font-size: 1.3rem; cursor: pointer;
             transition: background-color 0.25s, transform 0.1s;
         }
         .btn:active:not(:disabled) { transform: scale(0.97); }
         .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
-        .btn-main    { width: min(380px, 68vw); }
+        .btn-main    { width: 380px; }
         .btn-prepare { background-color: #00AEEF; }
         .btn-prepare:hover:not(:disabled) { background-color: #0090cc; }
 
@@ -97,11 +107,7 @@
         }
         .btn-share:hover:not(:disabled) { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
 
-        .btn-delete {
-            width: min(100px, 24vw); background-color: #e53935;
-            font-size: clamp(0.85rem, 3vw, 1.1rem);
-            padding: clamp(14px, 4vw, 20px) 8px;
-        }
+        .btn-delete { width: 100px; background-color: #e53935; font-size: 1.1rem; padding: 20px 10px; }
         .btn-delete:hover:not(:disabled) { background-color: #b71c1c; }
 
         .share-hint { font-size: 0.82rem; color: #555; text-align: center; display: none; max-width: 500px; }
@@ -157,6 +163,9 @@
     <button class="update-btn-close"  onclick="document.getElementById('updateBanner').classList.remove('show')">&#x2715;</button>
 </div>
 
+<!-- ══ SKALIERTER BEREICH (Formular + Buttons) ══ -->
+<div id="scale-wrapper">
+
 <!-- ══ FORMULAR ══ -->
 <div id="capture-area">
     <div class="header">
@@ -201,6 +210,8 @@
     </div>
     <div class="share-hint" id="shareHint">&#x261D;&#xFE0F; Nochmal tippen &rarr; Aktionsmenü öffnet sich</div>
 </div>
+
+</div><!-- Ende #scale-wrapper -->
 
 <div class="confirm-overlay" id="confirmOverlay">
     <div class="confirm-box">
@@ -540,6 +551,43 @@ document.addEventListener('visibilitychange', function () {
     }
 
     document.addEventListener('DOMContentLoaded', restoreTableData);
+
+/* ══════════════════════════════════════════
+   AUTO-SKALIERUNG
+   scale = Bildschirmbreite / 1050
+   Auf Desktop (≥1050px): keine Skalierung.
+   Negatives marginBottom entfernt den
+   Leerraum unter dem skalierten Inhalt.
+══════════════════════════════════════════ */
+    var DESIGN_WIDTH = 1050;
+
+    function autoScale() {
+        var vw      = window.innerWidth || document.documentElement.clientWidth;
+        var scale   = Math.min(1, vw / DESIGN_WIDTH);
+        var wrapper = document.getElementById('scale-wrapper');
+        if (!wrapper) return;
+
+        if (scale < 1) {
+            wrapper.style.transform    = 'scale(' + scale + ')';
+            // Leerraum unterhalb des skalierten Wrappers entfernen
+            var naturalH = wrapper.offsetHeight;
+            wrapper.style.marginBottom = '-' + Math.round(naturalH * (1 - scale)) + 'px';
+        } else {
+            wrapper.style.transform    = 'none';
+            wrapper.style.marginBottom = '0';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        autoScale();
+        // Nochmals nach Restore (Höhe kann sich durch Daten ändern)
+        setTimeout(autoScale, 100);
+    });
+    window.addEventListener('resize',      autoScale);
+    window.addEventListener('orientationchange', function () {
+        setTimeout(autoScale, 200); // kurze Verzögerung nach Rotation
+    });
 </script>
 </body>
+</html>
 </html>
