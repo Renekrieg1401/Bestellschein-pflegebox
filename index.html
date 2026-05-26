@@ -2,14 +2,44 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1100">
+    <meta name="viewport" content="width=1050">
     <title>Bestellformular Pflegehilfsmittel</title>
+
+    <!-- ══ PWA META ══════════════════════════════════════════════════════ -->
+    <meta name="mobile-web-app-capable"            content="yes">
+    <meta name="apple-mobile-web-app-capable"      content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title"        content="PflegeBox">
+    <meta name="theme-color"                       content="#702673">
+    <!-- Apple Touch Icon (iOS Safari Add to Home Screen) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM3MDI2NzMiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMEFFRUYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjkwIiBmaWxsPSJ1cmwoI2cpIi8+PHJlY3QgeD0iMTQ4IiB5PSIxNzYiIHdpZHRoPSIyMTYiIGhlaWdodD0iMjU2IiByeD0iMTgiIGZpbGw9IndoaXRlIi8+PHJlY3QgeD0iMTk2IiB5PSIxNDgiIHdpZHRoPSIxMjAiIGhlaWdodD0iNTYiIHJ4PSIxNCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxOTYiIHk9IjE0OCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSI1NiIgcng9IjE0IiBmaWxsPSIjZThlOGU4Ii8+PHJlY3QgeD0iMjI2IiB5PSIxNDAiIHdpZHRoPSI2MCIgaGVpZ2h0PSIzMiIgcng9IjgiIGZpbGw9IiNjY2NjY2MiLz48cmVjdCB4PSIxODMiIHk9IjIzOCIgd2lkdGg9IjE0NiIgaGVpZ2h0PSIxMyIgcng9IjYiIGZpbGw9IiMwMEFFRUYiIG9wYWNpdHk9IjAuOCIvPjxyZWN0IHg9IjE4MyIgeT0iMjY4IiB3aWR0aD0iMTQ2IiBoZWlnaHQ9IjEzIiByeD0iNiIgZmlsbD0iIzcwMjY3MyIgb3BhY2l0eT0iMC41Ii8+PHJlY3QgeD0iMTgzIiB5PSIyOTgiIHdpZHRoPSIxMTAiIGhlaWdodD0iMTMiIHJ4PSI2IiBmaWxsPSIjMDBBRUVGIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIxODMiIHk9IjMyOCIgd2lkdGg9IjEzMCIgaGVpZ2h0PSIxMyIgcng9IjYiIGZpbGw9IiM3MDI2NzMiIG9wYWNpdHk9IjAuNSIvPjxyZWN0IHg9IjE4MyIgeT0iMzU4IiB3aWR0aD0iOTAiIGhlaWdodD0iMTMiIHJ4PSI2IiBmaWxsPSIjMDBBRUVGIiBvcGFjaXR5PSIwLjQiLz48L3N2Zz4K">
+    <!-- Manifest wird per JavaScript als Blob gesetzt (einzige Methode die auf Android Chrome funktioniert) -->
+    <link rel="manifest" id="pwa-manifest">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         body { font-family: "Helvetica", Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; width: 1050px; }
+
+        /* ── UPDATE-BANNER (oben fixiert) ── */
+        #updateBanner {
+            display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 10000;
+            background: linear-gradient(90deg, #702673 0%, #00AEEF 100%);
+            color: white; padding: 11px 16px;
+            align-items: center; justify-content: space-between; gap: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        }
+        #updateBanner.show { display: flex; }
+        #updateBanner span { font-size: 0.9rem; font-weight: bold; }
+        .update-btn-reload {
+            background: white; color: #702673; border: none; border-radius: 8px;
+            padding: 7px 16px; font-weight: bold; font-size: 0.85rem; cursor: pointer;
+        }
+        .update-btn-close {
+            background: transparent; border: 1px solid rgba(255,255,255,0.6);
+            color: white; border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 0.85rem;
+        }
 
         .header {
             background: linear-gradient(90deg, #702673 0%, #00AEEF 100%);
@@ -26,7 +56,6 @@
             padding: 3px; font-weight: bold; border: 1px solid #ccc; border-radius: 4px;
         }
 
-        /* ── STATUS ── */
         .status-bar {
             display: flex; justify-content: center; align-items: center; gap: 8px;
             font-size: 0.82rem; color: #555; margin: 10px 0 4px; min-height: 22px;
@@ -38,7 +67,6 @@
         .status-dot.saved  { background-color: #4CAF50; }
         .status-dot.saving { background-color: #FFA500; }
 
-        /* ── BUTTONS ── */
         .button-container {
             margin: 12px 0 24px; display: flex; flex-direction: column;
             align-items: center; gap: 12px; width: 100%;
@@ -46,15 +74,15 @@
         .btn-row { display: flex; gap: 14px; justify-content: center; width: 100%; }
 
         .btn {
-            padding: 20px 40px; border: none; border-radius: 10px; font-weight: bold;
-            color: white; font-size: 1.3rem; cursor: pointer;
+            padding: clamp(14px, 4vw, 20px) clamp(16px, 5vw, 40px);
+            border: none; border-radius: 10px; font-weight: bold;
+            color: white; font-size: clamp(1rem, 3.5vw, 1.3rem); cursor: pointer;
             transition: background-color 0.25s, transform 0.1s;
         }
         .btn:active:not(:disabled) { transform: scale(0.97); }
         .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
-        /* Haupt-Button */
-        .btn-main   { width: 380px; }
+        .btn-main    { width: min(380px, 68vw); }
         .btn-prepare { background-color: #00AEEF; }
         .btn-prepare:hover:not(:disabled) { background-color: #0090cc; }
 
@@ -69,10 +97,10 @@
         }
         .btn-share:hover:not(:disabled) { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
 
-        /* Löschen-Button */
         .btn-delete {
-            width: 100px; background-color: #e53935; font-size: 1.1rem;
-            padding: 20px 10px;
+            width: min(100px, 24vw); background-color: #e53935;
+            font-size: clamp(0.85rem, 3vw, 1.1rem);
+            padding: clamp(14px, 4vw, 20px) 8px;
         }
         .btn-delete:hover:not(:disabled) { background-color: #b71c1c; }
 
@@ -108,7 +136,6 @@
         input[type="checkbox"] { transform: scale(1.4); }
         input[type="text"] { border: 1px solid #eee; padding: 6px; font-size: 1.1rem; }
 
-        /* ── TOAST ── */
         .toast {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: #333; color: #fff; padding: 12px 28px; border-radius: 8px;
@@ -122,6 +149,13 @@
     </style>
 </head>
 <body>
+
+<!-- ══ UPDATE-BANNER ══ -->
+<div id="updateBanner">
+    <span>&#x1F504; Update verfügbar</span>
+    <button class="update-btn-reload" onclick="location.reload()">Jetzt aktualisieren</button>
+    <button class="update-btn-close"  onclick="document.getElementById('updateBanner').classList.remove('show')">&#x2715;</button>
+</div>
 
 <!-- ══ FORMULAR ══ -->
 <div id="capture-area">
@@ -147,6 +181,7 @@
                     <th>Unterl.</th>
                     <th>Desinfektion</th>
                     <th>Wipes</th>
+                    <th>Inko</th>
                 </tr>
             </thead>
             <tbody id="table-body"></tbody>
@@ -154,37 +189,28 @@
     </div>
 </div>
 
-<!-- ══ STATUS ══ -->
 <div class="status-bar">
     <span class="status-dot" id="statusDot"></span>
     <span id="statusText"></span>
 </div>
 
-<!-- ══ BUTTONS ══ -->
 <div class="button-container">
     <div class="btn-row">
-        <button id="mainBtn" class="btn btn-main btn-prepare" onclick="handleMainButton()">
-            PDF ERSTELLEN
-        </button>
-        <button class="btn btn-delete" onclick="confirmDelete()" title="Formular leeren">
-            🗑️ Leeren
-        </button>
+        <button id="mainBtn" class="btn btn-main btn-prepare" onclick="handleMainButton()">PDF ERSTELLEN</button>
+        <button class="btn btn-delete" onclick="confirmDelete()" title="Formular leeren">&#x1F5D1;&#xFE0F; Leeren</button>
     </div>
-    <div class="share-hint" id="shareHint">
-        ☝️ Nochmal tippen &rarr; Aktionsmenü öffnet sich
-    </div>
+    <div class="share-hint" id="shareHint">&#x261D;&#xFE0F; Nochmal tippen &rarr; Aktionsmenü öffnet sich</div>
 </div>
 
-<!-- ══ BESTÄTIGUNGS-DIALOG ══ -->
 <div class="confirm-overlay" id="confirmOverlay">
     <div class="confirm-box">
-        <h2>🗑️ Formular leeren?</h2>
+        <h2>&#x1F5D1;&#xFE0F; Formular leeren?</h2>
         <p>Alle Namen, Mengen und Häkchen werden gelöscht.<br>
            Der gespeicherte Stand wird ebenfalls entfernt.<br>
            <strong>Diese Aktion kann nicht rückgängig gemacht werden.</strong></p>
         <div class="confirm-btns">
-            <button class="btn-confirm-cancel"  onclick="closeConfirm()">Abbrechen</button>
-            <button class="btn-confirm-delete"  onclick="executeDelete()">Ja, alles löschen</button>
+            <button class="btn-confirm-cancel" onclick="closeConfirm()">Abbrechen</button>
+            <button class="btn-confirm-delete" onclick="executeDelete()">Ja, alles löschen</button>
         </div>
     </div>
 </div>
@@ -192,35 +218,133 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    const STORAGE_KEY = 'bestellschein_aktuell';
-    const ROWS        = 16;
+/* ═══════════════════════════════════════════════════════════════════
+   PWA — MANIFEST PER BLOB-URL SETZEN
+   ─────────────────────────────────────────────────────────────────
+   data: URIs werden von Chrome/Android als Manifest abgelehnt.
+   Blob-URLs gelten als same-origin und werden akzeptiert.
+   Ermöglicht "Zum Startbildschirm hinzufügen" mit App-Icon auf
+   Android Chrome, Samsung Internet und iOS Safari.
+═══════════════════════════════════════════════════════════════════ */
+(function () {
+    var ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM3MDI2NzMiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMEFFRUYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjkwIiBmaWxsPSJ1cmwoI2cpIi8+PHJlY3QgeD0iMTQ4IiB5PSIxNzYiIHdpZHRoPSIyMTYiIGhlaWdodD0iMjU2IiByeD0iMTgiIGZpbGw9IndoaXRlIi8+PHJlY3QgeD0iMTk2IiB5PSIxNDgiIHdpZHRoPSIxMjAiIGhlaWdodD0iNTYiIHJ4PSIxNCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxOTYiIHk9IjE0OCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSI1NiIgcng9IjE0IiBmaWxsPSIjZThlOGU4Ii8+PHJlY3QgeD0iMjI2IiB5PSIxNDAiIHdpZHRoPSI2MCIgaGVpZ2h0PSIzMiIgcng9IjgiIGZpbGw9IiNjY2NjY2MiLz48cmVjdCB4PSIxODMiIHk9IjIzOCIgd2lkdGg9IjE0NiIgaGVpZ2h0PSIxMyIgcng9IjYiIGZpbGw9IiMwMEFFRUYiIG9wYWNpdHk9IjAuOCIvPjxyZWN0IHg9IjE4MyIgeT0iMjY4IiB3aWR0aD0iMTQ2IiBoZWlnaHQ9IjEzIiByeD0iNiIgZmlsbD0iIzcwMjY3MyIgb3BhY2l0eT0iMC41Ii8+PHJlY3QgeD0iMTgzIiB5PSIyOTgiIHdpZHRoPSIxMTAiIGhlaWdodD0iMTMiIHJ4PSI2IiBmaWxsPSIjMDBBRUVGIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIxODMiIHk9IjMyOCIgd2lkdGg9IjEzMCIgaGVpZ2h0PSIxMyIgcng9IjYiIGZpbGw9IiM3MDI2NzMiIG9wYWNpdHk9IjAuNSIvPjxyZWN0IHg9IjE4MyIgeT0iMzU4IiB3aWR0aD0iOTAiIGhlaWdodD0iMTMiIHJ4PSI2IiBmaWxsPSIjMDBBRUVGIiBvcGFjaXR5PSIwLjQiLz48L3N2Zz4K';
 
-    let appState    = 'idle';
-    let pdfBlob     = null;
-    let pdfFilename = '';
-    let saveTimer   = null;
+    var manifest = {
+        name            : 'Bestellformular Pflegehilfsmittel',
+        short_name      : 'PflegeBox',
+        description     : 'Monatlicher Bestellschein für Pflegehilfsmittel',
+        start_url       : '.',
+        display         : 'standalone',
+        background_color: '#ffffff',
+        theme_color     : '#702673',
+        orientation     : 'landscape',
+        icons: [{ src: ICON, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }]
+    };
 
-    /* ══ TABELLE AUFBAUEN ══ */
-    const tbody   = document.getElementById('table-body');
-    const getOpts = () => [0,1,2,3,4,5].map(v => `<option value="${v}">${v===0?'':v}</option>`).join('');
+    try {
+        var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+        document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+    } catch (e) { /* Fallback: kein Manifest verfügbar */ }
+})();
 
-    for (let i = 0; i < ROWS; i++) {
-        tbody.innerHTML += `
-            <tr>
-                <td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="Name" data-key="name-${i}"></td>
-                <td>
-                    S:<select data-key="s-${i}">${getOpts()}</select>
-                    M:<select data-key="m-${i}">${getOpts()}</select>
-                    L:<select data-key="l-${i}">${getOpts()}</select>
-                </td>
-                <td><input type="checkbox" data-key="wh-${i}"></td>
-                <td><input type="checkbox" data-key="ul-${i}"></td>
-                <td>H<input type="checkbox" data-key="dh-${i}"> F<input type="checkbox" data-key="df-${i}"></td>
-                <td>H<input type="checkbox" data-key="wph-${i}"> F<input type="checkbox" data-key="wpf-${i}"></td>
-            </tr>`;
+/* ═══════════════════════════════════════════════════════════════════
+   AUTO-UPDATE
+   ─────────────────────────────────────────────────────────────────
+   Prüft beim Start und alle 5 Minuten ob sich die Datei im
+   Repository geändert hat. Vergleich per djb2-Hash des HTML-Inhalts.
+   Bei Änderung: Update-Banner erscheint → Nutzer kann neu laden.
+   Prüfung auch bei Tab-Fokus (nach Hintergrund-Wechsel).
+═══════════════════════════════════════════════════════════════════ */
+var VERSION_KEY = 'pflegebox_version';
+var updateCheckTimer = null;
+
+function hashStr(s) {
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) {
+        h = ((h << 5) + h) + s.charCodeAt(i);
+        h |= 0; // 32-bit integer
+    }
+    return (h >>> 0).toString(36);
+}
+
+function checkForUpdates() {
+    // Nur sinnvoll wenn über HTTP(S) geladen
+    if (location.protocol === 'file:') return;
+
+    fetch(location.href + '?_=' + Date.now(), {
+        method : 'GET',
+        cache  : 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+    })
+    .then(function (r) {
+        if (!r.ok) return;
+        return r.text();
+    })
+    .then(function (html) {
+        if (!html) return;
+        var hash   = hashStr(html);
+        var stored = '';
+        try { stored = localStorage.getItem(VERSION_KEY) || ''; } catch (_) {}
+
+        if (!stored) {
+            // Erststart: Hash speichern, kein Banner
+            try { localStorage.setItem(VERSION_KEY, hash); } catch (_) {}
+            return;
+        }
+        if (stored !== hash) {
+            // Neue Version erkannt
+            try { localStorage.setItem(VERSION_KEY, hash); } catch (_) {}
+            document.getElementById('updateBanner').classList.add('show');
+        }
+    })
+    .catch(function () { /* Offline oder CORS – ignorieren */ });
+}
+
+// Prüfung beim Start (500ms verzögert damit Render nicht blockiert wird)
+setTimeout(checkForUpdates, 500);
+
+// Alle 5 Minuten
+updateCheckTimer = setInterval(checkForUpdates, 5 * 60 * 1000);
+
+// Bei Rückkehr aus Hintergrund / Tab-Wechsel
+document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') checkForUpdates();
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   APP-ZUSTAND & KONSTANTEN
+═══════════════════════════════════════════════════════════════════ */
+    var STORAGE_KEY = 'bestellschein_aktuell';
+    var ROWS        = 16;
+
+    var appState    = 'idle';
+    var pdfBlob     = null;
+    var pdfFilename = '';
+    var saveTimer   = null;
+
+/* ── TABELLE AUFBAUEN ── */
+    var tbody   = document.getElementById('table-body');
+    function getOpts() {
+        return [0,1,2,3,4,5].map(function(v) {
+            return '<option value="' + v + '">' + (v === 0 ? '' : v) + '</option>';
+        }).join('');
     }
 
-    /* ══ BUTTON-ZUSTANDSMASCHINE ══ */
+    for (var i = 0; i < ROWS; i++) {
+        tbody.innerHTML += '<tr>' +
+            '<td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="Name" data-key="name-' + i + '"></td>' +
+            '<td>S:<select data-key="s-' + i + '">' + getOpts() + '</select>' +
+               ' M:<select data-key="m-' + i + '">' + getOpts() + '</select>' +
+               ' L:<select data-key="l-' + i + '">' + getOpts() + '</select></td>' +
+            '<td><input type="checkbox" data-key="wh-' + i + '"></td>' +
+            '<td><input type="checkbox" data-key="ul-' + i + '"></td>' +
+            '<td>H<input type="checkbox" data-key="dh-' + i + '"> F<input type="checkbox" data-key="df-' + i + '"></td>' +
+            '<td>H<input type="checkbox" data-key="wph-' + i + '"> F<input type="checkbox" data-key="wpf-' + i + '"></td>' +
+            '<td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="" data-key="inko-' + i + '"></td>' +
+            '</tr>';
+    }
+
+/* ══ BUTTON-ZUSTANDSMASCHINE ══ */
     function setAppState(state) {
         appState = state;
         var btn  = document.getElementById('mainBtn');
@@ -232,51 +356,60 @@
             btn.disabled    = false;
             hint.classList.remove('visible');
         } else if (state === 'generating') {
-            btn.textContent = '\u23f3  Erstelle PDF \u2026';
+            btn.textContent = '\u23F3  Erstelle PDF \u2026';
             btn.className   = 'btn btn-main btn-prepare';
             btn.disabled    = true;
             hint.classList.remove('visible');
         } else if (state === 'ready') {
-            btn.textContent = '\ud83d\udce4  PDF SENDEN / TEILEN';
+            btn.textContent = '\uD83D\uDCE4  PDF SENDEN / TEILEN';
             btn.className   = 'btn btn-main btn-share';
             btn.disabled    = false;
             hint.classList.add('visible');
         }
     }
 
-    /* ══ HAUPT-HANDLER ══ */
+/* ══ HAUPT-HANDLER ══ */
     async function handleMainButton() {
         if (appState === 'idle')  { await buildPDF(); return; }
         if (appState === 'ready') { doShare();        return; }
     }
 
-    /* ══ SCHRITT 1 — PDF ERSTELLEN ══ */
+/* ══ SCHRITT 1 — PDF ERSTELLEN (async) ══ */
     async function buildPDF() {
         setAppState('generating');
         var monat = document.getElementById('monat').value || 'Bestellung';
         pdfFilename = 'Bestellung_' + monat + '.pdf';
 
         try {
-            var canvas = await html2canvas(document.getElementById('capture-area'), {
+            // Für sauberes PDF: capture-area temporär auf Fixbreite setzen
+            var area = document.getElementById('capture-area');
+            var prevStyle = area.getAttribute('style') || '';
+            area.style.width    = '1050px';
+            area.style.minWidth = '1050px';
+
+            var canvas = await html2canvas(area, {
                 scale: 2, useCORS: true, logging: false
             });
+
+            // Breite zurücksetzen
+            area.setAttribute('style', prevStyle);
 
             var jsPDF   = window.jspdf.jsPDF;
             var pdf     = new jsPDF('l', 'mm', 'a4');
             var imgData = canvas.toDataURL('image/jpeg', 0.95);
             pdf.addImage(imgData, 'JPEG', 0, 0, 297, (canvas.height * 297) / canvas.width);
-
             pdfBlob = pdf.output('blob');
             setAppState('ready');
             showToast('PDF bereit \u2013 jetzt Senden tippen \u2713', 'success');
-
         } catch (err) {
+            var area2 = document.getElementById('capture-area');
+            area2.style.width = ''; area2.style.minWidth = '';
             showToast('Fehler: ' + err.message, 'error');
             setAppState('idle');
         }
     }
 
-    /* ══ SCHRITT 2 — TEILEN (synchron, frischer Gesture-Kontext) ══ */
+/* ══ SCHRITT 2 — TEILEN (synchron, frischer Gesture-Kontext) ══ */
     function doShare() {
         if (!pdfBlob) { setAppState('idle'); return; }
 
@@ -293,20 +426,18 @@
 
         if (canShareFiles) {
             navigator.share({ files: [file], title: pdfFilename })
-                .then(function() { showToast('Geteilt \u2713', 'success'); setAppState('idle'); })
-                .catch(function(err) { if (err.name !== 'AbortError') downloadFallback(); });
+                .then(function () { showToast('Geteilt \u2713', 'success'); setAppState('idle'); })
+                .catch(function (err) { if (err.name !== 'AbortError') downloadFallback(); });
             return;
         }
-
         if (typeof navigator.share === 'function') {
             var blobUrl = URL.createObjectURL(pdfBlob);
             navigator.share({ title: pdfFilename, url: blobUrl })
-                .then(function() { showToast('Geteilt \u2713', 'success'); setAppState('idle'); })
-                .catch(function(err) { if (err.name !== 'AbortError') downloadFallback(); })
-                .finally(function() { setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 10000); });
+                .then(function () { showToast('Geteilt \u2713', 'success'); setAppState('idle'); })
+                .catch(function (err) { if (err.name !== 'AbortError') downloadFallback(); })
+                .finally(function () { setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 10000); });
             return;
         }
-
         downloadFallback();
     }
 
@@ -315,84 +446,59 @@
         var a   = document.createElement('a');
         a.href = url; a.download = pdfFilename;
         document.body.appendChild(a); a.click();
-        setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+        setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
         showToast('PDF wird heruntergeladen \u2026');
         setAppState('idle');
     }
 
-    /* ══════════════════════════════════════════
-       LÖSCHFUNKTION
-    ══════════════════════════════════════════ */
-
-    /** Öffnet den Bestätigungs-Dialog */
+/* ══ LÖSCHFUNKTION ══ */
     function confirmDelete() {
         document.getElementById('confirmOverlay').classList.add('visible');
     }
-
-    /** Schließt den Dialog ohne Aktion */
     function closeConfirm() {
         document.getElementById('confirmOverlay').classList.remove('visible');
     }
-
-    /** Wird nach Bestätigung ausgeführt — löscht alles */
     function executeDelete() {
         closeConfirm();
-
-        // 1. Monat zurücksetzen
         document.getElementById('monat').value = '';
-
-        // 2. Alle Tabellen-Eingaben leeren
-        document.querySelectorAll('[data-key]').forEach(function(el) {
-            if (el.type === 'checkbox') {
-                el.checked = false;
-            } else if (el.tagName === 'SELECT') {
-                el.value = '0';
-            } else {
-                el.value = '';
-            }
+        document.querySelectorAll('[data-key]').forEach(function (el) {
+            if (el.type === 'checkbox') el.checked = false;
+            else if (el.tagName === 'SELECT') el.value = '0';
+            else el.value = '';
         });
-
-        // 3. localStorage löschen
         try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-
-        // 4. PDF-Zustand zurücksetzen
         pdfBlob = null;
         setAppState('idle');
         setStatus('', 'Formular geleert');
-
-        showToast('\ud83d\uddd1\ufe0f Formular wurde geleert', 'warn');
+        showToast('\uD83D\uDDD1\uFE0F Formular wurde geleert', 'warn');
     }
 
-    /* Klick außerhalb des Dialogs schließt ihn */
-    document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+    document.getElementById('confirmOverlay').addEventListener('click', function (e) {
         if (e.target === this) closeConfirm();
     });
-
-    /* ESC-Taste schließt den Dialog */
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeConfirm();
     });
 
-    /* ══ DATENPERSISTENZ — SPEICHERN ══ */
+/* ══ DATENPERSISTENZ ══ */
     function persistTableData() {
         try {
             var data = { monat: document.getElementById('monat').value };
-            document.querySelectorAll('[data-key]').forEach(function(el) {
+            document.querySelectorAll('[data-key]').forEach(function (el) {
                 data[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
             });
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             setStatus('saved', 'Automatisch gespeichert');
-        } catch (_) { setStatus('', 'Speichern nicht verf\u00fcgbar'); }
+        } catch (_) { setStatus('', 'Speichern nicht verf\u00FCgbar'); }
     }
 
-    /* ══ DATENPERSISTENZ — WIEDERHERSTELLEN ══ */
     function restoreTableData() {
         try {
             var raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) return;
             var data = JSON.parse(raw);
             if (data.monat) document.getElementById('monat').value = data.monat;
-            document.querySelectorAll('[data-key]').forEach(function(el) {
+            document.querySelectorAll('[data-key]').forEach(function (el) {
                 var val = data[el.dataset.key];
                 if (val === undefined) return;
                 if (el.type === 'checkbox') el.checked = Boolean(val);
@@ -402,12 +508,11 @@
         } catch (_) {}
     }
 
-    /* ══ DATEN-CHANGE-HANDLER ══ */
     function onDataChange() {
         if (appState === 'ready') {
             pdfBlob = null;
             setAppState('idle');
-            showToast('Daten ge\u00e4ndert \u2013 PDF neu erstellen');
+            showToast('Daten ge\u00E4ndert \u2013 PDF neu erstellen');
         }
         setStatus('saving', 'Speichert \u2026');
         clearTimeout(saveTimer);
@@ -418,7 +523,7 @@
     document.getElementById('table-body').addEventListener('change', onDataChange);
     document.getElementById('monat').addEventListener('change', onDataChange);
 
-    /* ══ HILFSFUNKTIONEN ══ */
+/* ══ HILFSFUNKTIONEN ══ */
     function setStatus(type, text) {
         var dot  = document.getElementById('statusDot');
         var span = document.getElementById('statusText');
@@ -431,7 +536,7 @@
         t.textContent = msg;
         t.className   = 'toast' + (type ? ' ' + type : '');
         t.classList.add('show');
-        setTimeout(function() { t.classList.remove('show'); }, 3200);
+        setTimeout(function () { t.classList.remove('show'); }, 3200);
     }
 
     document.addEventListener('DOMContentLoaded', restoreTableData);
