@@ -1,593 +1,93 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bestellformular Pflegehilfsmittel</title>
-
-    <!-- ══ PWA META ══════════════════════════════════════════════════════ -->
-    <meta name="mobile-web-app-capable"            content="yes">
-    <meta name="apple-mobile-web-app-capable"      content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title"        content="PflegeBox">
-    <meta name="theme-color"                       content="#702673">
-    <!-- Apple Touch Icon (iOS Safari Add to Home Screen) -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM3MDI2NzMiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMEFFRUYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjkwIiBmaWxsPSJ1cmwoI2cpIi8+PHJlY3QgeD0iMTQ4IiB5PSIxNzYiIHdpZHRoPSIyMTYiIGhlaWdodD0iMjU2IiByeD0iMTgiIGZpbGw9IndoaXRlIi8+PHJlY3QgeD0iMTk2IiB5PSIxNDgiIHdpZHRoPSIxMjAiIGhlaWdodD0iNTYiIHJ4PSIxNCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxOTYiIHk9IjE0OCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSI1NiIgcng9IjE0IiBmaWxsPSIjZThlOGU4Ii8+PHJlY3QgeD0iMjI2IiB5PSIxNDAiIHdpZHRoPSI2MCIgaGVpZ2h0PSIzMiIgcng9IjgiIGZpbGw9IiNjY2NjY2MiLz48cmVjdCB4PSIxODMiIHk9IjIzOCIgd2lkdGg9IjE0NiIgaGVpZ2h0PSIxMyIgcng9IjYiIGZpbGw9IiMwMEFFRUYiIG9wYWNpdHk9IjAuOCIvPjxyZWN0IHg9IjE4MyIgeT0iMjY4IiB3aWR0aD0iMTQ2IiBoZWlnaHQ9IjEzIiByeD0iNiIgZmlsbD0iIzcwMjY3MyIgb3BhY2l0eT0iMC41Ii8+PHJlY3QgeD0iMTgzIiB5PSIyOTgiIHdpZHRoPSIxMTAiIGhlaWdodD0iMTMiIHJ4PSI2IiBmaWxsPSIjMDBBRUVGIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIxODMiIHk9IjMyOCIgd2lkdGg9IjEzMCIgaGVpZ2h0PSIxMyIgcng9IjYiIGZpbGw9IiM3MDI2NzMiIG9wYWNpdHk9IjAuNSIvPjxyZWN0IHg9IjE4MyIgeT0iMzU4IiB3aWR0aD0iOTAiIGhlaWdodD0iMTMiIHJ4PSI2IiBmaWxsPSIjMDBBRUVGIiBvcGFjaXR5PSIwLjQiLz48L3N2Zz4K">
-    <!-- Manifest wird per JavaScript als Blob gesetzt (einzige Methode die auf Android Chrome funktioniert) -->
-    <link rel="manifest" id="pwa-manifest">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-    <style>
-        body { font-family: "Helvetica", Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; }
-
-        /* ── AUTO-SKALIERUNG ─────────────────────────────────────────────
-           #scale-wrapper hält das 1050px-Layout.
-           JS berechnet scale = Bildschirmbreite / 1050 und wendet
-           CSS transform:scale() an. Overlays & Toast bleiben außerhalb
-           → werden NICHT skaliert → decken immer den vollen Bildschirm.
-        ─────────────────────────────────────────────────────────────────── */
-        #scale-wrapper {
-            width: 1050px;
-            transform-origin: top left;
-        }
-
-        /* ── UPDATE-BANNER (oben fixiert) ── */
-        #updateBanner {
-            display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 10000;
-            background: linear-gradient(90deg, #702673 0%, #00AEEF 100%);
-            color: white; padding: 11px 16px;
-            align-items: center; justify-content: space-between; gap: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-        }
-        #updateBanner.show { display: flex; }
-        #updateBanner span { font-size: 0.9rem; font-weight: bold; }
-        .update-btn-reload {
-            background: white; color: #702673; border: none; border-radius: 8px;
-            padding: 7px 16px; font-weight: bold; font-size: 0.85rem; cursor: pointer;
-        }
-        .update-btn-close {
-            background: transparent; border: 1px solid rgba(255,255,255,0.6);
-            color: white; border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 0.85rem;
-        }
-
-        .header {
-            background: linear-gradient(90deg, #702673 0%, #00AEEF 100%);
-            color: #ffffff; padding: 15px; display: flex; justify-content: space-between; align-items: center;
-        }
-        .header h1 { margin: 0; font-size: 1.2rem; font-weight: bold; }
-
-        .container { padding: 10px; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th, td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 0.85rem; }
-
-        select {
-            font-size: 1.2rem; text-align: center; text-align-last: center;
-            padding: 3px; font-weight: bold; border: 1px solid #ccc; border-radius: 4px;
-        }
-
-        .status-bar {
-            display: flex; justify-content: center; align-items: center; gap: 8px;
-            font-size: 0.82rem; color: #555; margin: 10px 0 4px; min-height: 22px;
-        }
-        .status-dot {
-            width: 9px; height: 9px; border-radius: 50%; background-color: #ccc;
-            display: inline-block; transition: background-color 0.4s;
-        }
-        .status-dot.saved  { background-color: #4CAF50; }
-        .status-dot.saving { background-color: #FFA500; }
-
-        .button-container {
-            margin: 12px 0 24px; display: flex; flex-direction: column;
-            align-items: center; gap: 12px; width: 100%;
-        }
-        .btn-row { display: flex; gap: 14px; justify-content: center; width: 100%; }
-
-        .btn {
-            padding: 20px 40px; border: none; border-radius: 10px; font-weight: bold;
-            color: white; font-size: 1.3rem; cursor: pointer;
-            transition: background-color 0.25s, transform 0.1s;
-        }
-        .btn:active:not(:disabled) { transform: scale(0.97); }
-        .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
-
-        .btn-main    { width: 380px; }
-        .btn-prepare { background-color: #00AEEF; }
-        .btn-prepare:hover:not(:disabled) { background-color: #0090cc; }
-
-        .btn-share {
-            background: linear-gradient(135deg, #2e7d32, #43a047);
-            box-shadow: 0 4px 14px rgba(46,125,50,0.35);
-            animation: pulse-green 1.8s ease-in-out infinite;
-        }
-        @keyframes pulse-green {
-            0%, 100% { box-shadow: 0 4px 14px rgba(46,125,50,0.35); }
-            50%       { box-shadow: 0 4px 22px rgba(46,125,50,0.65); }
-        }
-        .btn-share:hover:not(:disabled) { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
-
-        .btn-delete { width: 100px; background-color: #e53935; font-size: 1.1rem; padding: 20px 10px; }
-        .btn-delete:hover:not(:disabled) { background-color: #b71c1c; }
-
-        .share-hint { font-size: 0.82rem; color: #555; text-align: center; display: none; max-width: 500px; }
-        .share-hint.visible { display: block; }
-
-        /* ── BESTÄTIGUNGS-DIALOG ── */
-        .confirm-overlay {
-            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-            z-index: 1000; justify-content: center; align-items: center;
-        }
-        .confirm-overlay.visible { display: flex; }
-        .confirm-box {
-            background: #fff; border-radius: 16px; padding: 32px 36px;
-            max-width: 420px; width: 90%; text-align: center;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.25);
-        }
-        .confirm-box h2 { margin: 0 0 10px; font-size: 1.3rem; color: #b71c1c; }
-        .confirm-box p  { margin: 0 0 26px; font-size: 0.95rem; color: #444; line-height: 1.5; }
-        .confirm-btns   { display: flex; gap: 14px; justify-content: center; }
-        .confirm-btns button {
-            flex: 1; padding: 14px; border: none; border-radius: 10px;
-            font-size: 1rem; font-weight: bold; cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        .confirm-btns button:active { transform: scale(0.97); }
-        .btn-confirm-delete { background-color: #e53935; color: #fff; }
-        .btn-confirm-delete:hover { background-color: #b71c1c; }
-        .btn-confirm-cancel { background-color: #eeeeee; color: #333; }
-        .btn-confirm-cancel:hover { background-color: #bdbdbd; }
-
-        #capture-area { background: white; padding-bottom: 20px; }
-        input[type="checkbox"] { transform: scale(1.4); }
-        input[type="text"] { border: 1px solid #eee; padding: 6px; font-size: 1.1rem; }
-
-        .toast {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: #333; color: #fff; padding: 12px 28px; border-radius: 8px;
-            font-size: 0.9rem; opacity: 0; pointer-events: none; z-index: 9999;
-            transition: opacity 0.35s; white-space: nowrap;
-        }
-        .toast.show    { opacity: 1; }
-        .toast.success { background: #4CAF50; }
-        .toast.error   { background: #e53935; }
-        .toast.warn    { background: #e65100; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="app-version" content="2026-09-27-005">
+  <meta name="description" content="Monatlicher Bestellschein für Pflegehilfsmittel — offline, mit PDF- und JPG-Export.">
+  <meta name="theme-color" content="#702673">
+  <meta name="color-scheme" content="light">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PflegeBox">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <title>PflegeBox — Bestellformular Pflegehilfsmittel</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="js/app.js"></script>
 </head>
 <body>
+  <a class="skip" href="#haupt">Zum Formular springen</a>
 
-<!-- ══ UPDATE-BANNER ══ -->
-<div id="updateBanner">
-    <span>&#x1F504; Update verfügbar</span>
-    <button class="update-btn-reload" onclick="location.reload()">Jetzt aktualisieren</button>
-    <button class="update-btn-close"  onclick="document.getElementById('updateBanner').classList.remove('show')">&#x2715;</button>
-</div>
-
-<!-- ══ SKALIERTER BEREICH (Formular + Buttons) ══ -->
-<div id="scale-wrapper">
-
-<!-- ══ FORMULAR ══ -->
-<div id="capture-area">
-    <div class="header">
-        <h1>Bestellformular Pflegehilfsmittel</h1>
-        <div>
-            Monat:
-            <select id="monat">
-                <option value="" selected disabled hidden></option>
-                <option>Januar</option><option>Februar</option><option>März</option><option>April</option>
-                <option>Mai</option><option>Juni</option><option>Juli</option><option>August</option>
-                <option>September</option><option>Oktober</option><option>November</option><option>Dezember</option>
-            </select>
-        </div>
+  <div id="update-banner" class="update-overlay" role="alertdialog" aria-modal="true" aria-labelledby="update-titel" aria-describedby="update-text" hidden>
+    <div class="update-karte">
+      <h2 id="update-titel">Neue Version verfügbar</h2>
+      <p id="update-text">Eine aktualisierte PflegeBox wurde veröffentlicht. Ihre Eingaben bleiben beim Aktualisieren erhalten.</p>
+      <button type="button" id="update-laden" class="btn btn-primaer">Jetzt aktualisieren</button>
+      <button type="button" id="update-schliessen" class="btn btn-rand">Später</button>
     </div>
-    <div class="container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Einmalhandschuhe (S, M, L)</th>
-                    <th>Waschh.</th>
-                    <th>Unterl.</th>
-                    <th>Desinfektion</th>
-                    <th>Wipes</th>
-                    <th>Inko</th>
-                </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-        </table>
+  </div>
+
+  <header id="kopf" class="kopf">
+    <h1 class="kopf-titel">Bestellformular Pflegehilfsmittel</h1>
+    <nav class="monat-nav" aria-label="Monat wählen">
+      <button type="button" id="monat-zurueck" class="btn-icon btn-icon-hell" aria-label="Vorheriger Monat">‹</button>
+      <output id="monat-label" class="monat-label" aria-live="polite"></output>
+      <button type="button" id="monat-vor" class="btn-icon btn-icon-hell" aria-label="Nächster Monat">›</button>
+    </nav>
+  </header>
+
+  <main id="haupt" class="haupt" tabindex="-1">
+    <div class="statusleiste">
+      <span class="speicherstatus"><span id="speicher-punkt" class="punkt" aria-hidden="true"></span><span id="speicher-text" role="status"></span></span>
     </div>
-</div>
 
-<div class="status-bar">
-    <span class="status-dot" id="statusDot"></span>
-    <span id="statusText"></span>
-</div>
-
-<div class="button-container">
-    <div class="btn-row">
-        <button id="mainBtn" class="btn btn-main btn-prepare" onclick="handleMainButton()">PDF ERSTELLEN</button>
-        <button class="btn btn-delete" onclick="confirmDelete()" title="Formular leeren">&#x1F5D1;&#xFE0F; Leeren</button>
+    <div id="uebernahme" class="hinweis" hidden>
+      <span id="uebernahme-text"></span>
+      <span class="knopfgruppe">
+        <button type="button" id="btn-uebernehmen-namen" class="btn btn-klein btn-rand">Nur Personen</button>
+        <button type="button" id="btn-uebernehmen-alles" class="btn btn-klein btn-rand">Personen + Mengen</button>
+      </span>
     </div>
-    <div class="share-hint" id="shareHint">&#x261D;&#xFE0F; Nochmal tippen &rarr; Aktionsmenü öffnet sich</div>
-</div>
 
-</div><!-- Ende #scale-wrapper -->
-
-<div class="confirm-overlay" id="confirmOverlay">
-    <div class="confirm-box">
-        <h2>&#x1F5D1;&#xFE0F; Formular leeren?</h2>
-        <p>Alle Namen, Mengen und Häkchen werden gelöscht.<br>
-           Der gespeicherte Stand wird ebenfalls entfernt.<br>
-           <strong>Diese Aktion kann nicht rückgängig gemacht werden.</strong></p>
-        <div class="confirm-btns">
-            <button class="btn-confirm-cancel" onclick="closeConfirm()">Abbrechen</button>
-            <button class="btn-confirm-delete" onclick="executeDelete()">Ja, alles löschen</button>
-        </div>
+    <div class="tabelle-rahmen">
+      <table id="tabelle" class="tabelle">
+        <caption class="sr-only">Bestellpositionen je Person. Mit „Weitere Person hinzufügen“ eine neue Zeile anlegen, mit „Person entfernen“ löschen.</caption>
+        <thead></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
     </div>
-</div>
 
-<div class="toast" id="toast"></div>
+    <details id="protokoll" class="protokoll" hidden>
+      <summary>Änderungsprotokoll dieses Monats</summary>
+      <ul id="protokoll-liste"></ul>
+    </details>
+  </main>
 
-<script>
-/* ═══════════════════════════════════════════════════════════════════
-   PWA — MANIFEST PER BLOB-URL SETZEN
-   ─────────────────────────────────────────────────────────────────
-   data: URIs werden von Chrome/Android als Manifest abgelehnt.
-   Blob-URLs gelten als same-origin und werden akzeptiert.
-   Ermöglicht "Zum Startbildschirm hinzufügen" mit App-Icon auf
-   Android Chrome, Samsung Internet und iOS Safari.
-═══════════════════════════════════════════════════════════════════ */
-(function () {
-    var ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM3MDI2NzMiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMEFFRUYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjkwIiBmaWxsPSJ1cmwoI2cpIi8+PHJlY3QgeD0iMTQ4IiB5PSIxNzYiIHdpZHRoPSIyMTYiIGhlaWdodD0iMjU2IiByeD0iMTgiIGZpbGw9IndoaXRlIi8+PHJlY3QgeD0iMTk2IiB5PSIxNDgiIHdpZHRoPSIxMjAiIGhlaWdodD0iNTYiIHJ4PSIxNCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxOTYiIHk9IjE0OCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSI1NiIgcng9IjE0IiBmaWxsPSIjZThlOGU4Ii8+PHJlY3QgeD0iMjI2IiB5PSIxNDAiIHdpZHRoPSI2MCIgaGVpZ2h0PSIzMiIgcng9IjgiIGZpbGw9IiNjY2NjY2MiLz48cmVjdCB4PSIxODMiIHk9IjIzOCIgd2lkdGg9IjE0NiIgaGVpZ2h0PSIxMyIgcng9IjYiIGZpbGw9IiMwMEFFRUYiIG9wYWNpdHk9IjAuOCIvPjxyZWN0IHg9IjE4MyIgeT0iMjY4IiB3aWR0aD0iMTQ2IiBoZWlnaHQ9IjEzIiByeD0iNiIgZmlsbD0iIzcwMjY3MyIgb3BhY2l0eT0iMC41Ii8+PHJlY3QgeD0iMTgzIiB5PSIyOTgiIHdpZHRoPSIxMTAiIGhlaWdodD0iMTMiIHJ4PSI2IiBmaWxsPSIjMDBBRUVGIiBvcGFjaXR5PSIwLjYiLz48cmVjdCB4PSIxODMiIHk9IjMyOCIgd2lkdGg9IjEzMCIgaGVpZ2h0PSIxMyIgcng9IjYiIGZpbGw9IiM3MDI2NzMiIG9wYWNpdHk9IjAuNSIvPjxyZWN0IHg9IjE4MyIgeT0iMzU4IiB3aWR0aD0iOTAiIGhlaWdodD0iMTMiIHJ4PSI2IiBmaWxsPSIjMDBBRUVGIiBvcGFjaXR5PSIwLjQiLz48L3N2Zz4K';
+  <nav id="aktionen" class="aktionen" aria-label="Aktionen">
+    <button type="button" id="btn-pdf" class="btn btn-teilen">PDF senden / teilen</button>
+    <button type="button" id="btn-pdf-laden" class="btn btn-rand" aria-label="PDF herunterladen">⬇ PDF<span class="nur-breit">&nbsp;herunterladen</span></button>
+    <button type="button" id="btn-jpg-laden" class="btn btn-rand" aria-label="JPG herunterladen">⬇ JPG<span class="nur-breit">&nbsp;herunterladen</span></button>
+    <button type="button" id="btn-leeren" class="btn btn-gefahr">Monat leeren</button>
+  </nav>
 
-    var manifest = {
-        name            : 'Bestellformular Pflegehilfsmittel',
-        short_name      : 'PflegeBox',
-        description     : 'Monatlicher Bestellschein für Pflegehilfsmittel',
-        start_url       : '.',
-        display         : 'standalone',
-        background_color: '#ffffff',
-        theme_color     : '#702673',
-        orientation     : 'landscape',
-        icons: [{ src: ICON, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }]
-    };
+  <dialog id="dlg-bestaetigen" class="dialog" aria-labelledby="dlg-bestaetigen-titel" aria-describedby="dlg-bestaetigen-text">
+    <form method="dialog">
+      <h2 id="dlg-bestaetigen-titel"></h2>
+      <p id="dlg-bestaetigen-text"></p>
+      <div class="knopfgruppe knopfgruppe-ende">
+        <button type="submit" value="abbrechen" id="dlg-bestaetigen-abbrechen" class="btn btn-rand">Abbrechen</button>
+        <button type="submit" value="ok" id="dlg-bestaetigen-ok" class="btn btn-gefahr">OK</button>
+      </div>
+    </form>
+  </dialog>
 
-    try {
-        var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-        document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
-    } catch (e) { /* Fallback: kein Manifest verfügbar */ }
-})();
 
-/* ═══════════════════════════════════════════════════════════════════
-   AUTO-UPDATE
-   ─────────────────────────────────────────────────────────────────
-   Prüft beim Start und alle 5 Minuten ob sich die Datei im
-   Repository geändert hat. Vergleich per djb2-Hash des HTML-Inhalts.
-   Bei Änderung: Update-Banner erscheint → Nutzer kann neu laden.
-   Prüfung auch bei Tab-Fokus (nach Hintergrund-Wechsel).
-═══════════════════════════════════════════════════════════════════ */
-var VERSION_KEY = 'pflegebox_version';
-var updateCheckTimer = null;
-
-function hashStr(s) {
-    var h = 5381;
-    for (var i = 0; i < s.length; i++) {
-        h = ((h << 5) + h) + s.charCodeAt(i);
-        h |= 0; // 32-bit integer
-    }
-    return (h >>> 0).toString(36);
-}
-
-function checkForUpdates() {
-    // Nur sinnvoll wenn über HTTP(S) geladen
-    if (location.protocol === 'file:') return;
-
-    fetch(location.href + '?_=' + Date.now(), {
-        method : 'GET',
-        cache  : 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
-    })
-    .then(function (r) {
-        if (!r.ok) return;
-        return r.text();
-    })
-    .then(function (html) {
-        if (!html) return;
-        var hash   = hashStr(html);
-        var stored = '';
-        try { stored = localStorage.getItem(VERSION_KEY) || ''; } catch (_) {}
-
-        if (!stored) {
-            // Erststart: Hash speichern, kein Banner
-            try { localStorage.setItem(VERSION_KEY, hash); } catch (_) {}
-            return;
-        }
-        if (stored !== hash) {
-            // Neue Version erkannt
-            try { localStorage.setItem(VERSION_KEY, hash); } catch (_) {}
-            document.getElementById('updateBanner').classList.add('show');
-        }
-    })
-    .catch(function () { /* Offline oder CORS – ignorieren */ });
-}
-
-// Prüfung beim Start (500ms verzögert damit Render nicht blockiert wird)
-setTimeout(checkForUpdates, 500);
-
-// Alle 5 Minuten
-updateCheckTimer = setInterval(checkForUpdates, 5 * 60 * 1000);
-
-// Bei Rückkehr aus Hintergrund / Tab-Wechsel
-document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') checkForUpdates();
-});
-
-/* ═══════════════════════════════════════════════════════════════════
-   APP-ZUSTAND & KONSTANTEN
-═══════════════════════════════════════════════════════════════════ */
-    var STORAGE_KEY = 'bestellschein_aktuell';
-    var ROWS        = 16;
-
-    var appState    = 'idle';
-    var pdfBlob     = null;
-    var pdfFilename = '';
-    var saveTimer   = null;
-
-/* ── TABELLE AUFBAUEN ── */
-    var tbody   = document.getElementById('table-body');
-    function getOpts() {
-        return [0,1,2,3,4,5].map(function(v) {
-            return '<option value="' + v + '">' + (v === 0 ? '' : v) + '</option>';
-        }).join('');
-    }
-
-    for (var i = 0; i < ROWS; i++) {
-        tbody.innerHTML += '<tr>' +
-            '<td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="Name" data-key="name-' + i + '"></td>' +
-            '<td>S:<select data-key="s-' + i + '">' + getOpts() + '</select>' +
-               ' M:<select data-key="m-' + i + '">' + getOpts() + '</select>' +
-               ' L:<select data-key="l-' + i + '">' + getOpts() + '</select></td>' +
-            '<td><input type="checkbox" data-key="wh-' + i + '"></td>' +
-            '<td><input type="checkbox" data-key="ul-' + i + '"></td>' +
-            '<td>H<input type="checkbox" data-key="dh-' + i + '"> F<input type="checkbox" data-key="df-' + i + '"></td>' +
-            '<td>H<input type="checkbox" data-key="wph-' + i + '"> F<input type="checkbox" data-key="wpf-' + i + '"></td>' +
-            '<td><input type="text" style="width:95%;border:none;text-align:center;" placeholder="" data-key="inko-' + i + '"></td>' +
-            '</tr>';
-    }
-
-/* ══ BUTTON-ZUSTANDSMASCHINE ══ */
-    function setAppState(state) {
-        appState = state;
-        var btn  = document.getElementById('mainBtn');
-        var hint = document.getElementById('shareHint');
-
-        if (state === 'idle') {
-            btn.textContent = 'PDF ERSTELLEN';
-            btn.className   = 'btn btn-main btn-prepare';
-            btn.disabled    = false;
-            hint.classList.remove('visible');
-        } else if (state === 'generating') {
-            btn.textContent = '\u23F3  Erstelle PDF \u2026';
-            btn.className   = 'btn btn-main btn-prepare';
-            btn.disabled    = true;
-            hint.classList.remove('visible');
-        } else if (state === 'ready') {
-            btn.textContent = '\uD83D\uDCE4  PDF SENDEN / TEILEN';
-            btn.className   = 'btn btn-main btn-share';
-            btn.disabled    = false;
-            hint.classList.add('visible');
-        }
-    }
-
-/* ══ HAUPT-HANDLER ══ */
-    async function handleMainButton() {
-        if (appState === 'idle')  { await buildPDF(); return; }
-        if (appState === 'ready') { doShare();        return; }
-    }
-
-/* ══ SCHRITT 1 — PDF ERSTELLEN (async) ══ */
-    async function buildPDF() {
-        setAppState('generating');
-        var monat = document.getElementById('monat').value || 'Bestellung';
-        pdfFilename = 'Bestellung_' + monat + '.pdf';
-
-        try {
-            // Für sauberes PDF: capture-area temporär auf Fixbreite setzen
-            var area = document.getElementById('capture-area');
-            var prevStyle = area.getAttribute('style') || '';
-            area.style.width    = '1050px';
-            area.style.minWidth = '1050px';
-
-            var canvas = await html2canvas(area, {
-                scale: 2, useCORS: true, logging: false
-            });
-
-            // Breite zurücksetzen
-            area.setAttribute('style', prevStyle);
-
-            var jsPDF   = window.jspdf.jsPDF;
-            var pdf     = new jsPDF('l', 'mm', 'a4');
-            var imgData = canvas.toDataURL('image/jpeg', 0.95);
-            pdf.addImage(imgData, 'JPEG', 0, 0, 297, (canvas.height * 297) / canvas.width);
-            pdfBlob = pdf.output('blob');
-            setAppState('ready');
-            showToast('PDF bereit \u2013 jetzt Senden tippen \u2713', 'success');
-        } catch (err) {
-            var area2 = document.getElementById('capture-area');
-            area2.style.width = ''; area2.style.minWidth = '';
-            showToast('Fehler: ' + err.message, 'error');
-            setAppState('idle');
-        }
-    }
-
-/* ══ SCHRITT 2 — TEILEN (synchron, frischer Gesture-Kontext) ══ */
-    function doShare() {
-        if (!pdfBlob) { setAppState('idle'); return; }
-
-        var file = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
-
-        var canShareFiles = false;
-        try {
-            canShareFiles = !!(
-                typeof navigator.share    === 'function' &&
-                typeof navigator.canShare === 'function' &&
-                navigator.canShare({ files: [file] })
-            );
-        } catch (_) { canShareFiles = false; }
-
-        if (canShareFiles) {
-            navigator.share({ files: [file], title: pdfFilename })
-                .then(function () { showToast('Geteilt \u2713', 'success'); setAppState('idle'); })
-                .catch(function (err) { if (err.name !== 'AbortError') downloadFallback(); });
-            return;
-        }
-        if (typeof navigator.share === 'function') {
-            var blobUrl = URL.createObjectURL(pdfBlob);
-            navigator.share({ title: pdfFilename, url: blobUrl })
-                .then(function () { showToast('Geteilt \u2713', 'success'); setAppState('idle'); })
-                .catch(function (err) { if (err.name !== 'AbortError') downloadFallback(); })
-                .finally(function () { setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 10000); });
-            return;
-        }
-        downloadFallback();
-    }
-
-    function downloadFallback() {
-        var url = URL.createObjectURL(pdfBlob);
-        var a   = document.createElement('a');
-        a.href = url; a.download = pdfFilename;
-        document.body.appendChild(a); a.click();
-        setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-        showToast('PDF wird heruntergeladen \u2026');
-        setAppState('idle');
-    }
-
-/* ══ LÖSCHFUNKTION ══ */
-    function confirmDelete() {
-        document.getElementById('confirmOverlay').classList.add('visible');
-    }
-    function closeConfirm() {
-        document.getElementById('confirmOverlay').classList.remove('visible');
-    }
-    function executeDelete() {
-        closeConfirm();
-        document.getElementById('monat').value = '';
-        document.querySelectorAll('[data-key]').forEach(function (el) {
-            if (el.type === 'checkbox') el.checked = false;
-            else if (el.tagName === 'SELECT') el.value = '0';
-            else el.value = '';
-        });
-        try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-        pdfBlob = null;
-        setAppState('idle');
-        setStatus('', 'Formular geleert');
-        showToast('\uD83D\uDDD1\uFE0F Formular wurde geleert', 'warn');
-    }
-
-    document.getElementById('confirmOverlay').addEventListener('click', function (e) {
-        if (e.target === this) closeConfirm();
-    });
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeConfirm();
-    });
-
-/* ══ DATENPERSISTENZ ══ */
-    function persistTableData() {
-        try {
-            var data = { monat: document.getElementById('monat').value };
-            document.querySelectorAll('[data-key]').forEach(function (el) {
-                data[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
-            });
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-            setStatus('saved', 'Automatisch gespeichert');
-        } catch (_) { setStatus('', 'Speichern nicht verf\u00FCgbar'); }
-    }
-
-    function restoreTableData() {
-        try {
-            var raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return;
-            var data = JSON.parse(raw);
-            if (data.monat) document.getElementById('monat').value = data.monat;
-            document.querySelectorAll('[data-key]').forEach(function (el) {
-                var val = data[el.dataset.key];
-                if (val === undefined) return;
-                if (el.type === 'checkbox') el.checked = Boolean(val);
-                else el.value = val;
-            });
-            setStatus('saved', 'Daten wiederhergestellt');
-        } catch (_) {}
-    }
-
-    function onDataChange() {
-        if (appState === 'ready') {
-            pdfBlob = null;
-            setAppState('idle');
-            showToast('Daten ge\u00E4ndert \u2013 PDF neu erstellen');
-        }
-        setStatus('saving', 'Speichert \u2026');
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(persistTableData, 400);
-    }
-
-    document.getElementById('table-body').addEventListener('input',  onDataChange);
-    document.getElementById('table-body').addEventListener('change', onDataChange);
-    document.getElementById('monat').addEventListener('change', onDataChange);
-
-/* ══ HILFSFUNKTIONEN ══ */
-    function setStatus(type, text) {
-        var dot  = document.getElementById('statusDot');
-        var span = document.getElementById('statusText');
-        dot.className    = 'status-dot' + (type ? ' ' + type : '');
-        span.textContent = text;
-    }
-
-    function showToast(msg, type) {
-        var t = document.getElementById('toast');
-        t.textContent = msg;
-        t.className   = 'toast' + (type ? ' ' + type : '');
-        t.classList.add('show');
-        setTimeout(function () { t.classList.remove('show'); }, 3200);
-    }
-
-    document.addEventListener('DOMContentLoaded', restoreTableData);
-
-/* ══════════════════════════════════════════
-   AUTO-SKALIERUNG
-   scale = Bildschirmbreite / 1050
-   Auf Desktop (≥1050px): keine Skalierung.
-   Negatives marginBottom entfernt den
-   Leerraum unter dem skalierten Inhalt.
-══════════════════════════════════════════ */
-    var DESIGN_WIDTH = 1050;
-
-    function autoScale() {
-        var vw      = window.innerWidth || document.documentElement.clientWidth;
-        var scale   = Math.min(1, vw / DESIGN_WIDTH);
-        var wrapper = document.getElementById('scale-wrapper');
-        if (!wrapper) return;
-
-        if (scale < 1) {
-            wrapper.style.transform    = 'scale(' + scale + ')';
-            // Leerraum unterhalb des skalierten Wrappers entfernen
-            var naturalH = wrapper.offsetHeight;
-            wrapper.style.marginBottom = '-' + Math.round(naturalH * (1 - scale)) + 'px';
-        } else {
-            wrapper.style.transform    = 'none';
-            wrapper.style.marginBottom = '0';
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        autoScale();
-        // Nochmals nach Restore (Höhe kann sich durch Daten ändern)
-        setTimeout(autoScale, 100);
-    });
-    window.addEventListener('resize',      autoScale);
-    window.addEventListener('orientationchange', function () {
-        setTimeout(autoScale, 200); // kurze Verzögerung nach Rotation
-    });
-</script>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
-</html>
 </html>
