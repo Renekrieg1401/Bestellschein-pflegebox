@@ -84,7 +84,8 @@ button, input, select { font: inherit; color: inherit; }
 /* ---------- Kopf ---------- */
 .kopf {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-  gap: .5rem 1rem; padding: .6rem max(16px, env(safe-area-inset-left)); color: #fff;
+  gap: .5rem 1rem; color: #fff;
+  padding: calc(.6rem + env(safe-area-inset-top)) max(16px, env(safe-area-inset-left)) .6rem;
   background: linear-gradient(90deg, var(--lila) 0%, var(--cyan-dunkel) 100%);
   box-shadow: 0 2px 10px rgba(0, 0, 0, .2);
 }
