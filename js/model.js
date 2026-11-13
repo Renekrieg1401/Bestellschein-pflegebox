@@ -12,30 +12,36 @@ export const MONATSNAMEN = Object.freeze([
   'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
 ]);
 
+/** Auswählbare Inkontinenzmaterial-Arten (feste Liste statt Freitext). */
+export const INKO_ARTEN = Object.freeze([
+  'Pants: S', 'Pants: M', 'Pants: L', 'Pants: XL',
+  'Windel: S', 'Windel: M', 'Windel: L', 'Windel: XL'
+]);
+
 /**
  * @typedef {'hs'|'hm'|'hl'|'wh'|'ul'|'dh'|'df'|'wph'|'wpf'} ArtikelKey
- * @typedef {{ key: ArtikelKey, label: string, kurz: string, typ: 'menge'|'check' }} Artikel
+ * @typedef {{ key: ArtikelKey, label: string, kurz: string }} Artikel
  */
 
-/** Bestellbare Pflegehilfsmittel (Inkontinenzmaterial separat als Freitext). */
+/** Bestellbare Pflegehilfsmittel, alle mit Mengenauswahl (Inkontinenzmaterial separat, s. INKO_ARTEN). */
 export const ARTIKEL = /** @type {ReadonlyArray<Artikel>} */ (Object.freeze([
-  { key: 'hs', label: 'Einmalhandschuhe Gr. S', kurz: 'Handsch. S', typ: 'menge' },
-  { key: 'hm', label: 'Einmalhandschuhe Gr. M', kurz: 'Handsch. M', typ: 'menge' },
-  { key: 'hl', label: 'Einmalhandschuhe Gr. L', kurz: 'Handsch. L', typ: 'menge' },
-  { key: 'wh', label: 'Einmal-Waschhandschuhe', kurz: 'Waschh.', typ: 'check' },
-  { key: 'ul', label: 'Einmal-Krankenunterlagen', kurz: 'Unterl.', typ: 'check' },
-  { key: 'dh', label: 'Desinfektionsmittel Hände', kurz: 'Desinf. H', typ: 'check' },
-  { key: 'df', label: 'Desinfektionsmittel Fläche', kurz: 'Desinf. F', typ: 'check' },
-  { key: 'wph', label: 'Desinfektions-Wipes Hände', kurz: 'Wipes H', typ: 'check' },
-  { key: 'wpf', label: 'Desinfektions-Wipes Fläche', kurz: 'Wipes F', typ: 'check' }
+  { key: 'hs', label: 'Einmalhandschuhe Gr. S', kurz: 'Handsch. S' },
+  { key: 'hm', label: 'Einmalhandschuhe Gr. M', kurz: 'Handsch. M' },
+  { key: 'hl', label: 'Einmalhandschuhe Gr. L', kurz: 'Handsch. L' },
+  { key: 'wh', label: 'Einmal-Waschhandschuhe', kurz: 'Waschh.' },
+  { key: 'ul', label: 'Einmal-Krankenunterlagen', kurz: 'Unterl.' },
+  { key: 'dh', label: 'Desinfektionsmittel Hände', kurz: 'Desinf. H' },
+  { key: 'df', label: 'Desinfektionsmittel Fläche', kurz: 'Desinf. F' },
+  { key: 'wph', label: 'Desinfektions-Wipes Hände', kurz: 'Wipes H' },
+  { key: 'wpf', label: 'Desinfektions-Wipes Fläche', kurz: 'Wipes F' }
 ]));
 
 /**
  * @typedef {{
  *   id: string, name: string,
  *   hs: number, hm: number, hl: number,
- *   wh: boolean, ul: boolean, dh: boolean, df: boolean, wph: boolean, wpf: boolean,
- *   inko: string
+ *   wh: number, ul: number, dh: number, df: number, wph: number, wpf: number,
+ *   inko: string, inkoMenge: number
  * }} Zeile
  * @typedef {{
  *   zeilen: Zeile[], geaendert: string, gesendet: Gesendet|null
@@ -101,13 +107,12 @@ export function neueId(zufall) {
 
 /** @param {string} id @returns {Zeile} */
 export function leereZeile(id) {
-  return { id, name: '', hs: 0, hm: 0, hl: 0, wh: false, ul: false, dh: false, df: false, wph: false, wpf: false, inko: '' };
+  return { id, name: '', hs: 0, hm: 0, hl: 0, wh: 0, ul: 0, dh: 0, df: 0, wph: 0, wpf: 0, inko: '', inkoMenge: 0 };
 }
 
 /** @param {Zeile} z @returns {boolean} */
 export function istLeer(z) {
-  return z.name.trim() === '' && z.inko.trim() === '' &&
-    ARTIKEL.every((a) => (a.typ === 'menge' ? z[a.key] === 0 : z[a.key] === false));
+  return z.name.trim() === '' && z.inko.trim() === '' && z.inkoMenge === 0 && ARTIKEL.every((a) => z[a.key] === 0);
 }
 
 /** @param {string} jetztIso @returns {Monat} */
@@ -128,6 +133,17 @@ function ganzzahl(v, min, max) {
   return Math.min(max, Math.max(min, Math.trunc(n)));
 }
 
+/** Menge, abwärtskompatibel zum alten Ja/Nein-Haken (Schema vor Mengenauswahl). @param {unknown} v @param {number} max */
+function mengeOderAlt(v, max) {
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  return ganzzahl(v, 0, max);
+}
+
+/** Inko-Art: nur ein Wert aus der festen Liste INKO_ARTEN, sonst leer. @param {unknown} v @returns {string} */
+function inkoArt(v) {
+  return typeof v === 'string' && /** @type {readonly string[]} */ (INKO_ARTEN).includes(v) ? v : '';
+}
+
 /** @param {unknown} v @param {string} ersatzId @returns {Zeile} */
 function normZeile(v, ersatzId) {
   const o = istObjekt(v) ? v : {};
@@ -135,8 +151,9 @@ function normZeile(v, ersatzId) {
   return {
     id, name: text(o.name, 80),
     hs: ganzzahl(o.hs, 0, MAX_PACKUNGEN), hm: ganzzahl(o.hm, 0, MAX_PACKUNGEN), hl: ganzzahl(o.hl, 0, MAX_PACKUNGEN),
-    wh: o.wh === true, ul: o.ul === true, dh: o.dh === true, df: o.df === true, wph: o.wph === true, wpf: o.wpf === true,
-    inko: text(o.inko, 80)
+    wh: mengeOderAlt(o.wh, MAX_PACKUNGEN), ul: mengeOderAlt(o.ul, MAX_PACKUNGEN), dh: mengeOderAlt(o.dh, MAX_PACKUNGEN),
+    df: mengeOderAlt(o.df, MAX_PACKUNGEN), wph: mengeOderAlt(o.wph, MAX_PACKUNGEN), wpf: mengeOderAlt(o.wpf, MAX_PACKUNGEN),
+    inko: inkoArt(o.inko), inkoMenge: ganzzahl(o.inkoMenge, 0, MAX_PACKUNGEN)
   };
 }
 
@@ -296,7 +313,7 @@ export function summen(zeilen) {
     if (istLeer(z)) return;
     s.personen += 1;
     ARTIKEL.forEach((a) => { s[a.key] += menge(z, a.key); });
-    if (z.inko.trim()) s.inko += 1;
+    s.inko += z.inkoMenge;
   });
   return s;
 }

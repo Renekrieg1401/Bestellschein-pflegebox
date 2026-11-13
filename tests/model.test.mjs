@@ -14,20 +14,20 @@ test('Monatsarithmetik über Jahresgrenzen', () => {
   assert.equal(ymText('2026-03'), 'März 2026');
 });
 
-test('Summen (Inko als Personenanzahl)', () => {
-  const z1 = { ...leereZeile('a'), name: 'Frau A', hm: 3, dh: true, inko: 'Pants M' };
+test('Summen (Inko-Menge wird wie die übrigen Artikel aufsummiert)', () => {
+  const z1 = { ...leereZeile('a'), name: 'Frau A', hm: 3, dh: 1, inko: 'Pants M', inkoMenge: 2 };
   const z2 = { ...leereZeile('b'), name: 'Herr B', hm: 1 };
   const s = summen([z1, z2, leereZeile('c')]);
   assert.equal(s.personen, 2);
   assert.equal(s.hm, 4);
   assert.equal(s.dh, 1);
-  assert.equal(s.inko, 1);
+  assert.equal(s.inko, 2);
 });
 
 test('Übernahme aus Vormonat (nur Personen / mit Mengen)', () => {
   const d = standardDaten(JETZT);
   const quelle = neuerMonat(JETZT.toISOString());
-  quelle.zeilen.push({ ...leereZeile('a'), name: 'Frau A', hs: 2, wh: true, inko: 'Vorlage' });
+  quelle.zeilen.push({ ...leereZeile('a'), name: 'Frau A', hs: 2, wh: 1, inko: 'Vorlage' });
   d.monate['2026-08'] = quelle;
   assert.equal(letzterBefuellterMonatVor(d, '2026-09'), '2026-08');
   assert.equal(letzterBefuellterMonatVor(d, '2026-08'), null);
@@ -38,7 +38,7 @@ test('Übernahme aus Vormonat (nur Personen / mit Mengen)', () => {
   const ziel2 = neuerMonat(JETZT.toISOString());
   uebernehmeZeilen(quelle, ziel2, true, () => 'n' + n++);
   assert.equal(ziel2.zeilen[0].hs, 2);
-  assert.equal(ziel2.zeilen[0].wh, true);
+  assert.equal(ziel2.zeilen[0].wh, 1);
   assert.notEqual(ziel2.zeilen[0].id, 'a');
 });
 
@@ -47,7 +47,9 @@ test('Normalisierung verwirft/klemmt ungültige Werte (Vertrauensgrenze)', () =>
     einstellungen: { absender: { name: 42 }, lieferant: { name: 'x'.repeat(500) } },
     monate: {
       '2026-13': { zeilen: [{ name: 'x' }] },
-      '2026-09': { zeilen: [{ id: 'a', name: 'A', hs: 99, wh: 'ja' }, { id: 'a', name: 'B' }, {}] }
+      '2026-09': { zeilen: [{ id: 'a', name: 'A', hs: 99, wh: 'ja', inkoMenge: 99, inko: 'Pants: M' }, { id: 'a', name: 'B', inko: 'Freitext außerhalb der Liste' }, {}] }
+      // 'ja' ist kein gültiger Zahlenwert → klemmt auf 0 (Min), 99 bei inkoMenge klemmt auf MAX_PACKUNGEN,
+      // 'Pants: M' ist in INKO_ARTEN enthalten (bleibt), freier Text ist es nicht (wird verworfen)
     },
     aktuellerMonat: 'x'
   }, JETZT);
@@ -57,22 +59,25 @@ test('Normalisierung verwirft/klemmt ungültige Werte (Vertrauensgrenze)', () =>
   const m = d.monate['2026-09'];
   assert.equal(m.zeilen.length, 2, 'leere Zeile entfernt');
   assert.equal(m.zeilen[0].hs, 5);
-  assert.equal(m.zeilen[0].wh, false);
+  assert.equal(m.zeilen[0].wh, 0);
+  assert.equal(m.zeilen[0].inkoMenge, 5);
+  assert.equal(m.zeilen[0].inko, 'Pants: M', 'Wert aus INKO_ARTEN bleibt erhalten');
+  assert.equal(m.zeilen[1].inko, '', 'Freitext außerhalb der festen Liste wird verworfen');
   assert.notEqual(m.zeilen[0].id, m.zeilen[1].id, 'doppelte IDs werden aufgelöst');
   assert.equal(d.aktuellerMonat, '2026-09');
 });
 
 test('Migration des Klartext-Altbestands (Bestellschein v1)', () => {
   const alt = { monat: 'Oktober', 'name-0': 'Frau A', 's-0': '2', 'm-0': '0', 'l-0': '0', 'wh-0': true, 'dh-0': true,
-    'inko-0': 'Pants', 'name-1': '', 's-1': '0', 'name-5': 'Herr B', 'l-5': '1', 'wpf-5': true };
+    'inko-0': 'Pants: M', 'name-1': '', 's-1': '0', 'name-5': 'Herr B', 'l-5': '1', 'wpf-5': true };
   const d = migriereAltbestand(alt, JETZT);
   assert.ok(d);
   assert.equal(d.aktuellerMonat, '2026-10');
   const m = d.monate['2026-10'];
   assert.equal(m.zeilen.length, 2);
-  assert.deepEqual(m.zeilen[0], { ...leereZeile('alt0'), name: 'Frau A', hs: 2, wh: true, dh: true, inko: 'Pants' });
+  assert.deepEqual(m.zeilen[0], { ...leereZeile('alt0'), name: 'Frau A', hs: 2, wh: 1, dh: 1, inko: 'Pants: M' });
   assert.equal(m.zeilen[1].hl, 1);
-  assert.equal(m.zeilen[1].wpf, true);
+  assert.equal(m.zeilen[1].wpf, 1);
   assert.equal(migriereAltbestand({ monat: 'Juni' }, new Date('2026-01-15T00:00:00Z'))?.aktuellerMonat, '2026-06');
   assert.equal(migriereAltbestand({ monat: 'Dezember' }, new Date('2026-01-15T00:00:00Z'))?.aktuellerMonat, '2025-12');
   assert.equal(migriereAltbestand(null, JETZT), null);

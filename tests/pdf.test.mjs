@@ -12,7 +12,7 @@ function beispiel(anzahl) {
   d.einstellungen.absender = { name: 'Pflegedienst Sonnenschein', strasse: 'Hauptstraße 1', ort: '35232 Dautphetal', telefon: '06466 123' };
   d.einstellungen.lieferant = { name: 'Sanitätshaus Müller', email: 'bestellung@example.org', kundennr: 'K-4711' };
   const m = neuerMonat(JETZT.toISOString());
-  for (let i = 0; i < anzahl; i++) m.zeilen.push({ ...leereZeile('z' + i), name: 'Person Ä(' + i + ')', hm: (i % 5) + 1, wh: i % 2 === 0, inko: i === 0 ? 'Pants Gr. M' : '' });
+  for (let i = 0; i < anzahl; i++) m.zeilen.push({ ...leereZeile('z' + i), name: 'Person Ä(' + i + ')', hm: (i % 5) + 1, wh: i % 2 === 0 ? 1 : 0, inko: i === 0 ? 'Pants Gr. M' : '', inkoMenge: i === 0 ? 2 : 0 });
   return { d, m };
 }
 
@@ -49,7 +49,7 @@ test('PDF ist gültig und enthält Briefkopf, Zeilen, Summe', async () => {
   for (const s of ['Bestellformular Pflegehilfsmittel', 'Monat: September 2026', 'Pflegedienst Sonnenschein', 'Sanitätshaus Müller',
     'Kunden-Nr. K-4711', 'Person Ä(0)', 'Pants Gr. M', 'Summe (4 Pers.)', 'Seite 1 von 1',
     'Legende', 'Einmal-Krankenunterlagen', 'Desinfektionsmittel für Hände / Fläche', 'Desinfektions-Wipes für Hände / Fläche',
-    'Einmalhandschuhe, Größe S, M, L (Anzahl Packungen)', 'wird benötigt; Inkontinenz = Freitext']) {
+    'Einmalhandschuhe, Größe S, M, L (Anzahl Packungen)', 'Pants/Windel Gr. S–XL (Menge in eigener Spalte)']) {
     assert.ok(text.includes(s), 'fehlt: ' + s + '\n' + text);
   }
   assert.equal(dateiname('2026-09', 'pdf'), 'Bestellung_2026-09.pdf');

@@ -48,8 +48,8 @@ try {
   assert.equal(await page.locator('#tabelle tbody tr[data-id]').count(), 2);
   await zeile(1).locator('[data-feld="name"]').fill('Herr Neu');
   await zeile(1).locator('[data-feld="hs"]').selectOption('3');
-  await zeile(1).locator('[data-feld="dh"]').check();
-  await zeile(1).locator('[data-feld="inko"]').fill('Pants Gr. L');
+  await zeile(1).locator('[data-feld="dh"]').selectOption('1');
+  await zeile(1).locator('[data-feld="inko"]').selectOption('Pants: L');
   assert.equal(await page.locator('#tabelle tbody tr[data-id]').count(), 2);
   assert.match(await page.textContent('#tabelle tfoot'), /Summe \(2 Pers\.\)/);
   await page.waitForFunction(() => document.getElementById('speicher-text')?.textContent === 'Gespeichert');
@@ -148,11 +148,11 @@ try {
 
   // 7) App schließen direkt nach der Eingabe (ohne Wartezeit) → Eingabe bleibt erhalten
   await page.click('#monat-zurueck');
-  await zeile(0).locator('[data-feld="inko"]').fill('Sofort gespeichert');
+  await zeile(0).locator('[data-feld="inko"]').selectOption('Windel: XL');
   await page.close();
   page = await neueSeite();
   await page.goto(URL_APP);
-  assert.equal(await zeile(0).locator('[data-feld="inko"]').inputValue(), 'Sofort gespeichert');
+  assert.equal(await zeile(0).locator('[data-feld="inko"]').inputValue(), 'Windel: XL');
   assert.equal(await zeile(1).locator('[data-feld="name"]').inputValue(), 'Herr Neu');
   assert.equal(await zeile(1).locator('[data-feld="hs"]').inputValue(), '3');
   schritt('Schließen direkt nach Eingabe, Neustart, Persistenz');
@@ -181,7 +181,7 @@ try {
   await page.waitForLoadState('load');
   await page.waitForTimeout(500);
   assert.equal(await page.isHidden('#update-banner'), true);
-  assert.equal(await zeile(0).locator('[data-feld="inko"]').inputValue(), 'Sofort gespeichert');
+  assert.equal(await zeile(0).locator('[data-feld="inko"]').inputValue(), 'Windel: XL');
   schritt('Update-Overlay beim Öffnen, Daten bleiben nach Aktualisierung');
 
   const relevant = fehler.filter((f) => !/Failed to load resource.*ERR_INTERNET_DISCONNECTED/.test(f));

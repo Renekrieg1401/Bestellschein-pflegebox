@@ -2,7 +2,7 @@
 // Bestelltabelle: DOM-Aufbau aus ARTIKEL (Single Source of Truth), Event-Delegation, Personen-Kacheln
 // per „+“ hinzufügen und per „−“ entfernen (Ersatz für die starren 16 Zeilen), Summenzeile.
 
-import { ARTIKEL, MAX_PACKUNGEN, MAX_ZEILEN, summen } from './model.js';
+import { ARTIKEL, INKO_ARTEN, MAX_PACKUNGEN, MAX_ZEILEN, summen } from './model.js';
 
 /**
  * @typedef {import('./model.js').Zeile} Zeile
@@ -33,6 +33,7 @@ function baueKopf(tabelle) {
     el('th', { scope: 'col', class: 'sp-name' }, ['Name']),
     ...ARTIKEL.map((a) => el('th', { scope: 'col', title: a.label }, [a.kurz])),
     el('th', { scope: 'col', class: 'sp-inko', title: 'Inkontinenzmaterial (Versorgung über SGB V)' }, ['Inko']),
+    el('th', { scope: 'col', class: 'sp-inko-menge', title: 'Inkontinenzmaterial — Menge' }, ['Menge']),
     el('th', { scope: 'col', class: 'sp-aktion' }, [el('span', { class: 'sr-only' }, ['Aktion'])])
   ]);
   tabelle.tHead?.replaceChildren(kopf);
@@ -48,8 +49,17 @@ function minusKnopf(nr) {
 function baueplusZeile() {
   const knopf = el('button', { type: 'button', class: 'btn-plus', 'data-aktion': 'neu', id: 'btn-person-neu',
     'aria-label': 'Weitere Person hinzufügen', title: 'Weitere Person hinzufügen' }, ['+']);
-  const zelle = el('td', { colspan: String(ARTIKEL.length + 4), class: 'sp-plus' }, [knopf, el('span', { 'aria-hidden': 'true' }, ['Weitere Person'])]);
+  const zelle = el('td', { colspan: String(ARTIKEL.length + 5), class: 'sp-plus' }, [knopf, el('span', { 'aria-hidden': 'true' }, ['Weitere Person'])]);
   return /** @type {HTMLTableRowElement} */ (el('tr', { class: 'plus-zeile' }, [zelle]));
+}
+
+/** Mengen-Auswahl (0..MAX_PACKUNGEN), gemeinsam für Artikel und Inko-Menge. @param {string} feldname @param {string} label @param {number} wert @returns {HTMLSelectElement} */
+function mengenAuswahl(feldname, label, wert) {
+  const opts = [];
+  for (let v = 0; v <= MAX_PACKUNGEN; v++) opts.push(el('option', { value: String(v) }, [v === 0 ? '–' : String(v)]));
+  const feld = /** @type {HTMLSelectElement} */ (el('select', { 'data-feld': feldname, 'aria-label': label }, opts));
+  feld.value = String(wert);
+  return feld;
 }
 
 /** @param {Zeile|null} z @param {number} nr @returns {HTMLTableRowElement} */
@@ -58,29 +68,18 @@ function baueZeile(z, nr) {
   const name = el('input', { type: 'text', 'data-feld': 'name', maxlength: '80', autocomplete: 'off',
     'aria-label': 'Name' + suffix, placeholder: z ? '' : 'Name eintragen …' });
   /** @type {HTMLInputElement} */ (name).value = z ? z.name : '';
-  const artikel = ARTIKEL.map((a) => {
-    const label = a.label + (a.typ === 'menge' ? ' (Packungen)' : '') + suffix;
-    let feld;
-    if (a.typ === 'menge') {
-      const opts = [];
-      for (let v = 0; v <= MAX_PACKUNGEN; v++) opts.push(el('option', { value: String(v) }, [v === 0 ? '–' : String(v)]));
-      feld = el('select', { 'data-feld': a.key, 'aria-label': label }, opts);
-      /** @type {HTMLSelectElement} */ (feld).value = String(z ? z[a.key] : 0);
-    } else {
-      feld = el('input', { type: 'checkbox', 'data-feld': a.key, 'aria-label': label });
-      /** @type {HTMLInputElement} */ (feld).checked = z ? z[a.key] === true : false;
-    }
-    return el('td', { 'data-label': a.kurz }, [feld]);
-  });
-  const inko = el('input', { type: 'text', 'data-feld': 'inko', maxlength: '80', autocomplete: 'off',
-    'aria-label': 'Inkontinenzmaterial' + suffix });
-  /** @type {HTMLInputElement} */ (inko).value = z ? z.inko : '';
+  const artikel = ARTIKEL.map((a) => el('td', { 'data-label': a.kurz }, [mengenAuswahl(a.key, a.label + ' (Menge)' + suffix, z ? z[a.key] : 0)]));
+  const inko = el('select', { 'data-feld': 'inko', 'aria-label': 'Inkontinenzmaterial, Art' + suffix },
+    [el('option', { value: '' }, ['–']), ...INKO_ARTEN.map((v) => el('option', { value: v }, [v]))]);
+  /** @type {HTMLSelectElement} */ (inko).value = z ? z.inko : '';
+  const inkoMenge = mengenAuswahl('inkoMenge', 'Inkontinenzmaterial, Menge' + suffix, z ? z.inkoMenge : 0);
   const entfernen = minusKnopf(nr);
   const tr = /** @type {HTMLTableRowElement} */ (el('tr', { 'data-id': z ? z.id : '' }, [
     el('td', { class: 'sp-nr', 'data-label': 'Nr.' }, [String(nr)]),
     el('td', { class: 'sp-name', 'data-label': 'Name' }, [name]),
     ...artikel,
     el('td', { class: 'sp-inko', 'data-label': 'Inko' }, [inko]),
+    el('td', { class: 'sp-inko-menge', 'data-label': 'Menge' }, [inkoMenge]),
     el('td', { class: 'sp-aktion' }, [entfernen])
   ]));
   if (!z) tr.classList.add('leerzeile');
@@ -90,15 +89,14 @@ function baueZeile(z, nr) {
 /** @param {HTMLElement} feld @param {Zeile} z */
 function uebernimmFeld(feld, z) {
   const k = feld.dataset.feld;
-  if (k === 'name' || k === 'inko') { z[k] = /** @type {HTMLInputElement} */ (feld).value.slice(0, 80); return; }
+  if (k === 'name') { z.name = /** @type {HTMLInputElement} */ (feld).value.slice(0, 80); return; }
+  if (k === 'inko') { z.inko = /** @type {HTMLSelectElement} */ (feld).value; return; }
+  const v = Number(/** @type {HTMLSelectElement} */ (feld).value);
+  const menge = Math.min(MAX_PACKUNGEN, Math.max(0, Number.isFinite(v) ? v : 0));
+  if (k === 'inkoMenge') { z.inkoMenge = menge; return; }
   const a = ARTIKEL.find((x) => x.key === k);
   if (!a) return;
-  if (a.typ === 'menge') {
-    const v = Number(/** @type {HTMLSelectElement} */ (feld).value);
-    /** @type {Record<string, number|boolean|string>} */ (z)[a.key] = Math.min(MAX_PACKUNGEN, Math.max(0, Number.isFinite(v) ? v : 0));
-  } else {
-    /** @type {Record<string, number|boolean|string>} */ (z)[a.key] = /** @type {HTMLInputElement} */ (feld).checked;
-  }
+  /** @type {Record<string, number|string>} */ (z)[a.key] = menge;
 }
 
 /**
@@ -150,7 +148,8 @@ export function erzeugeTabelle(tabelle, cb) {
     tfoot.replaceChildren(el('tr', {}, [
       el('th', { scope: 'row', colspan: '2', class: 'sp-name' }, ['Summe (' + s.personen + ' Pers.)']),
       ...ARTIKEL.map((a) => el('td', { 'data-label': a.kurz }, [String(s[a.key])])),
-      el('td', { class: 'sp-inko', 'data-label': 'Inko' }, [s.inko ? s.inko + ' Pers.' : '–']),
+      el('td', { class: 'sp-inko', 'data-label': 'Inko' }, ['']),
+      el('td', { class: 'sp-inko-menge', 'data-label': 'Menge' }, [String(s.inko)]),
       el('td', { class: 'sp-aktion' }, [''])
     ]));
   }

@@ -16,18 +16,20 @@ const LEGENDE_H = 52;
 /** Erklärung der Spaltenkürzel für den Empfänger (zwei Spalten à drei Zeilen). */
 const LEGENDE = Object.freeze([
   ['Handsch. S / M / L', 'Einmalhandschuhe, Größe S, M, L (Anzahl Packungen)'],
-  ['Waschh.', 'Einmal-Waschhandschuhe'],
-  ['Unterl.', 'Einmal-Krankenunterlagen'],
-  ['Desinf. H / F', 'Desinfektionsmittel für Hände / Fläche'],
-  ['Wipes H / F', 'Desinfektions-Wipes für Hände / Fläche'],
-  ['X', 'wird benötigt; Inkontinenz = Freitext']
+  ['Waschh.', 'Einmal-Waschhandschuhe (Anzahl Packungen)'],
+  ['Unterl.', 'Einmal-Krankenunterlagen (Anzahl Packungen)'],
+  ['Desinf. H / F', 'Desinfektionsmittel für Hände / Fläche (Anzahl Packungen)'],
+  ['Wipes H / F', 'Desinfektions-Wipes für Hände / Fläche (Anzahl Packungen)'],
+  ['Inkontinenz', 'Pants/Windel Gr. S–XL (Menge in eigener Spalte)']
 ]);
 
-/** Spaltenbreiten: Nr, Name, 9 Artikel, Inko → Summe = B − 2·RAND. */
+const INKO_MENGE_W = 40;
+
+/** Spaltenbreiten: Nr, Name, 9 Artikel, Inko (Art), Inko-Menge → Summe = B − 2·RAND. */
 const SPALTEN = (() => {
   const artikel = ARTIKEL.map(() => 52);
-  const fest = 24 + 170 + artikel.reduce((a, b) => a + b, 0);
-  return [24, 170, ...artikel, B - 2 * RAND - fest];
+  const fest = 24 + 170 + artikel.reduce((a, b) => a + b, 0) + INKO_MENGE_W;
+  return [24, 170, ...artikel, B - 2 * RAND - fest, INKO_MENGE_W];
 })();
 
 /**
@@ -78,12 +80,12 @@ function briefkopf(doc, d, ym, jetzt) {
 
 /** @param {Zeichenflaeche} doc @param {number} y */
 function tabellenkopf(doc, y) {
-  const titel = ['Nr.', 'Name', ...ARTIKEL.map((a) => a.kurz), 'Inkontinenz'];
+  const titel = ['Nr.', 'Name', ...ARTIKEL.map((a) => a.kurz), 'Inkontinenz', 'Menge'];
   let x = RAND;
   doc.rechteck(RAND, y, B - 2 * RAND, KOPF_H, { fuellung: LILA });
   titel.forEach((t, i) => {
     const w = SPALTEN[i];
-    const links = i === 1 || i === titel.length - 1;
+    const links = i === 1 || i === titel.length - 2;
     doc.text(links ? x + 5 : x + w / 2, y + 15.5, passeEin(t, w - 6, 8, true), {
       groesse: 8, fett: true, farbe: '#ffffff', ausrichtung: links ? 'links' : 'mitte'
     });
@@ -97,7 +99,7 @@ function tabellenzeile(doc, y, zellen, opt) {
   let x = RAND;
   zellen.forEach((z, i) => {
     const w = SPALTEN[i];
-    const links = i === 1 || i === zellen.length - 1;
+    const links = i === 1 || i === zellen.length - 2;
     if (z) {
       doc.text(links ? x + 5 : x + w / 2, y + 12.5, passeEin(z, w - 8, 9, !!opt.fett), {
         groesse: 9, fett: !!opt.fett, ausrichtung: links ? 'links' : 'mitte'
@@ -112,10 +114,8 @@ function tabellenzeile(doc, y, zellen, opt) {
 
 /** @param {Zeile} z @param {number} nr @returns {string[]} */
 function zellen(z, nr) {
-  return [String(nr), z.name, ...ARTIKEL.map((a) => {
-    const v = z[a.key];
-    return typeof v === 'number' ? (v > 0 ? String(v) : '') : v ? 'X' : '';
-  }), z.inko];
+  return [String(nr), z.name, ...ARTIKEL.map((a) => (z[a.key] > 0 ? String(z[a.key]) : '')),
+    z.inko, z.inkoMenge > 0 ? String(z.inkoMenge) : ''];
 }
 
 /** @param {Zeichenflaeche} doc @param {number} y */
@@ -180,7 +180,7 @@ function zeichneBestellung(doc, d, ym, m, jetzt) {
     if (s === plan.length - 1) {
       const sum = summen(zeilen);
       tabellenzeile(doc, y, ['', 'Summe (' + sum.personen + ' Pers.)', ...ARTIKEL.map((a) => String(sum[a.key])),
-        sum.inko ? sum.inko + ' Pers.' : ''], { fett: true, fuellung: '#e6f6fd' });
+        '', String(sum.inko)], { fett: true, fuellung: '#e6f6fd' });
       doc.linie(RAND, y, B - RAND, y, LILA, 1.2);
       legende(doc, y + ZEILE_H + 10);
     }

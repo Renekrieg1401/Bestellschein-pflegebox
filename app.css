@@ -119,6 +119,7 @@ button, input, select { font: inherit; color: inherit; }
 .tabelle thead th.sp-nr { color: #fff; }
 .tabelle .sp-name { text-align: left; min-width: 11rem; }
 .tabelle .sp-inko { min-width: 8rem; }
+.tabelle .sp-inko-menge { width: 4.5rem; }
 .tabelle .sp-aktion { width: 1%; white-space: nowrap; }
 .btn-minus, .btn-plus {
   display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
@@ -179,11 +180,11 @@ button, input, select { font: inherit; color: inherit; }
   .tabelle td[data-label]::before { content: attr(data-label); font-size: .75rem; font-weight: 700; color: var(--text-leise); }
   .tabelle .sp-nr { display: none; }
   .tabelle .sp-name { grid-column: 1 / -1; min-width: 0; }
-  .tabelle .sp-inko { grid-column: 1 / 3; min-width: 0; }
+  .tabelle .sp-inko { grid-column: 1 / 2; min-width: 0; }
+  .tabelle .sp-inko-menge { grid-column: 2 / 3; width: auto; }
   .tabelle .sp-aktion { grid-column: 3; align-items: flex-end; justify-content: flex-end; width: auto; }
   .tabelle tbody tr.plus-zeile { display: flex; align-items: center; background: transparent; box-shadow: none; padding: 0 .25rem; }
   .tabelle .plus-zeile td { flex-direction: row; align-items: center; padding: 0; }
-  .tabelle tfoot .sp-inko { grid-column: 1 / -1; }
   .nur-breit { display: none; }
   .tabelle input[type="text"] { border-color: #8a9096; background: #fff; }
   .tabelle tfoot tr { background: #e6f6fd; }
